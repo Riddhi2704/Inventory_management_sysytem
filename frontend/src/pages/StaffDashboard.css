@@ -1,0 +1,509 @@
+:root {
+    --sd-primary-color: #2563eb;
+    --sd-primary-hover: #1d4ed8;
+    --sd-bg-body: #f1f5f9;
+    --sd-bg-sidebar: #ffffff;
+    --sd-bg-card: #ffffff;
+    --sd-text-main: #111827;
+    --sd-text-muted: #6b7280;
+    --sd-border-color: #e5e7eb;
+
+    --sd-status-pending-bg: #fef9c3;
+    --sd-status-pending-text: #854d0e;
+    --sd-status-approved-bg: #dcfce7;
+    --sd-status-approved-text: #166534;
+    --sd-status-rejected-bg: #fee2e2;
+    --sd-status-rejected-text: #991b1b;
+
+    --sd-warning-bg: #fffbeb;
+    --sd-warning-text: #b45309;
+    --sd-warning-border: #fcd34d;
+
+    --sd-font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    --sd-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --sd-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --sd-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+body {
+    margin: 0;
+    font-family: var(--sd-font-family);
+    background-color: var(--sd-bg-body);
+    color: var(--sd-text-main);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Master Layout */
+.sd-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar Navigation */
+.sd-sidebar {
+    width: 260px;
+    background-color: var(--sd-bg-sidebar);
+    border-right: 1px solid var(--sd-border-color);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+}
+
+.sd-sidebar-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--sd-border-color);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--sd-primary-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sd-sidebar-nav {
+    padding: 1rem 0;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.sd-nav-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    color: var(--sd-text-muted);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9375rem;
+    transition: all 0.2s;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+}
+
+.sd-nav-item svg {
+    margin-right: 0.75rem;
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.sd-nav-item:hover {
+    background-color: var(--sd-bg-body);
+    color: var(--sd-text-main);
+}
+
+.sd-nav-item.active {
+    background-color: #eff6ff;
+    color: var(--sd-primary-color);
+    border-right: 3px solid var(--sd-primary-color);
+}
+
+.sd-sidebar-footer {
+    padding: 1rem;
+    border-top: 1px solid var(--sd-border-color);
+}
+
+/* Main Content Wrapper */
+.sd-main-wrapper {
+    flex: 1;
+    margin-left: 260px;
+    /* Offset for sidebar */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Top Navbar */
+.sd-topbar {
+    height: 64px;
+    background-color: var(--sd-bg-sidebar);
+    border-bottom: 1px solid var(--sd-border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+}
+
+.sd-topbar-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--sd-text-main);
+}
+
+.sd-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.sd-icon-btn {
+    background: transparent;
+    border: none;
+    color: var(--sd-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+    padding: 0.25rem;
+}
+
+.sd-icon-btn:hover {
+    color: var(--sd-primary-color);
+}
+
+.sd-user-profile {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--sd-text-main);
+}
+
+.sd-avatar {
+    width: 32px;
+    height: 32px;
+    background-color: var(--sd-bg-body);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--sd-primary-color);
+}
+
+/* Content Area */
+.sd-content {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.sd-page-header {
+    margin-bottom: 2rem;
+}
+
+.sd-page-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+}
+
+.sd-page-subtitle {
+    color: var(--sd-text-muted);
+    margin: 0;
+    font-size: 0.9375rem;
+}
+
+/* UI Components */
+.sd-card {
+    background-color: var(--sd-bg-card);
+    border-radius: 12px;
+    box-shadow: var(--sd-shadow-sm);
+    border: 1px solid var(--sd-border-color);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    transition: box-shadow 0.2s;
+}
+
+.sd-card:hover {
+    box-shadow: var(--sd-shadow-md);
+}
+
+.sd-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-bottom: 1px solid var(--sd-border-color);
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.sd-card-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* Forms */
+.sd-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.sd-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sd-form-group.full {
+    grid-column: 1 / -1;
+}
+
+.sd-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--sd-text-main);
+}
+
+.sd-input,
+.sd-select,
+.sd-textarea {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--sd-border-color);
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.sd-input:focus,
+.sd-select:focus,
+.sd-textarea:focus {
+    outline: none;
+    border-color: var(--sd-primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.sd-textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Buttons */
+.sd-btn-group {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.sd-btn {
+    padding: 0.625rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.sd-btn-primary {
+    background-color: var(--sd-primary-color);
+    color: white;
+}
+
+.sd-btn-primary:hover {
+    background-color: var(--sd-primary-hover);
+}
+
+.sd-btn-secondary {
+    background-color: white;
+    color: var(--sd-text-main);
+    border-color: var(--sd-border-color);
+}
+
+.sd-btn-secondary:hover {
+    background-color: var(--sd-bg-body);
+}
+
+/* Data Table */
+.sd-table-container {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--sd-border-color);
+}
+
+.sd-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.sd-table th {
+    background-color: var(--sd-bg-body);
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--sd-text-muted);
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--sd-border-color);
+}
+
+.sd-table td {
+    padding: 1rem;
+    font-size: 0.875rem;
+    border-bottom: 1px solid var(--sd-border-color);
+    color: var(--sd-text-main);
+}
+
+.sd-table tr:last-child td {
+    border-bottom: none;
+}
+
+.sd-table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+/* Status Badges */
+.sd-badge {
+    display: inline-flex;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.sd-badge.pending {
+    background-color: var(--sd-status-pending-bg);
+    color: var(--sd-status-pending-text);
+}
+
+.sd-badge.approved {
+    background-color: var(--sd-status-approved-bg);
+    color: var(--sd-status-approved-text);
+}
+
+/* Alert Cards (Low Stock) */
+.sd-alert-card {
+    background-color: var(--sd-warning-bg);
+    border: 1px solid var(--sd-warning-border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.sd-alert-icon {
+    color: var(--sd-warning-text);
+}
+
+.sd-alert-content {
+    flex: 1;
+}
+
+.sd-alert-title {
+    color: var(--sd-warning-text);
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+}
+
+.sd-alert-text {
+    color: #78350f;
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+/* Workflow Diagram (Simple CSS Flex implementation) */
+.sd-workflow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2rem 0;
+    position: relative;
+}
+
+.sd-workflow::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 2rem;
+    right: 2rem;
+    height: 2px;
+    background-color: var(--sd-border-color);
+    z-index: 1;
+}
+
+.sd-workflow-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    position: relative;
+    z-index: 2;
+    background-color: var(--sd-bg-card);
+    padding: 0 1rem;
+}
+
+.sd-workflow-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background-color: var(--sd-bg-body);
+    border: 2px solid var(--sd-border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--sd-text-muted);
+}
+
+.sd-workflow-step.active .sd-workflow-icon {
+    border-color: var(--sd-primary-color);
+    color: var(--sd-primary-color);
+    background-color: #eff6ff;
+}
+
+.sd-workflow-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-align: center;
+    max-width: 120px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .sd-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+    }
+
+    .sd-sidebar.open {
+        transform: translateX(0);
+    }
+
+    .sd-main-wrapper {
+        margin-left: 0;
+    }
+
+    .sd-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .sd-workflow {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2rem;
+    }
+
+    .sd-workflow::before {
+        top: 2rem;
+        bottom: 2rem;
+        left: 1.5rem;
+        height: auto;
+        width: 2px;
+    }
+
+    .sd-workflow-step {
+        flex-direction: row;
+        padding: 0;
+    }
+}
