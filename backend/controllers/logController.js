@@ -6,7 +6,8 @@ const Product = require('../models/Product');
 // @access  Private (Manager, Admin)
 const getMovementLogs = async (req, res) => {
   try {
-    const logs = await MovementLog.find()
+    const shopName = req.user.shopName;
+    const logs = await MovementLog.find({ shopName })
       .populate('product', 'name')
       .populate('movedBy', 'fullName role')
       .sort({ createdAt: -1 });
@@ -51,7 +52,8 @@ const recordMovement = async (req, res) => {
       fromLocation,
       toLocation,
       movedBy: req.user.id,
-      reason
+      reason,
+      shopName: req.user.shopName
     });
 
     res.status(201).json({ message: 'Movement recorded', log, updatedQuantity: product.quantity });

@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Users, Plus, Loader2, Trash2 } from 'lucide-react';
+import { 
+  LayoutDashboard, Users, Plus, Loader2, Trash2, 
+  Search, Edit, AlertCircle, CheckCircle2 
+} from 'lucide-react';
+import textData from '../constants/textData';
+import './CategorySupplierManager.css';
 
 export default function CategorySupplierManager() {
   const { user } = useAuth();
@@ -9,48 +14,76 @@ export default function CategorySupplierManager() {
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('categories'); // 'categories' or 'suppliers'
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Generic form state
   const [formData, setFormData] = useState({});
+  const [isEditing, setIsEditing] = useState(null); // { id: string, type: 'categories' | 'suppliers' }
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [toast, setToast] = useState(null); // { message: string, type: 'success' | 'error' }
+  const [deleteModal, setDeleteModal] = useState({ show: false, id: null, type: null });
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const [catRes, supRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/categories', { headers: { Authorization: `Bearer ${user.token}` } }),
-        axios.get('http://localhost:5000/api/suppliers', { headers: { Authorization: `Bearer ${user.token}` } })
+        axios.get('http://localhost:5001/api/categories', { headers: { Authorization: `Bearer ${user.token}` } }),
+        axios.get('http://localhost:5001/api/suppliers', { headers: { Authorization: `Bearer ${user.token}` } })
       ]);
       setCategories(catRes.data);
       setSuppliers(supRes.data);
     } catch (err) {
       console.error(err);
-      setError('Failed to load data');
+      setError(textData.categorySupplier.errors.load);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (user?.token) {
+      fetchData();
+    }
+  }, [user?.token]);
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleCreate = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError('');
 
     try {
-      const endpoint = activeTab === 'categories' ? '/api/categories' : '/api/suppliers';
-      await axios.post(`http://localhost:5000${endpoint}`, formData, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
+      const isCat = activeTab === 'categories';
+      const endpoint = isCat ? '/api/categories' : '/api/suppliers';
+      
+      // Phone validation for suppliers
+      if (!isCat && formData.phone) {
+        const phoneDigits = formData.phone.replace(/\D/g, '');
+        if (phoneDigits.length !== 10) {
+          setError("Phone number must be exactly 10 digits");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      
+      if (isEditing) {
+        await axios.put(`http://localhost:5001${endpoint}/${isEditing.id}`, formData, {
+          headers: { Authorization: `Bearer ${user.token}` }
+        });
+        showToast("Updated successfully");
+      } else {
+        await axios.post(`http://localhost:5001${endpoint}`, formData, {
+          headers: { Authorization: `Bearer ${user.token}` }
+        });
+        showToast(isCat ? textData.categorySupplier.success.categoryCreated : textData.categorySupplier.success.supplierCreated);
+      }
+      
       setFormData({});
+      setIsEditing(null);
       fetchData(); // Refresh lists
     } catch (err) {
       setError(err.response?.data?.message || err.message);
@@ -59,134 +92,268 @@ export default function CategorySupplierManager() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if(!window.confirm('Are you sure you want to delete this item?')) return;
+  const handleEditClick = (item, type) => {
+    setIsEditing({ id: item._id, type });
+    setFormData(item);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(null);
+    setFormData({});
+  };
+
+  const handleDeleteClick = (id, type) => {
+    setDeleteModal({ show: true, id, type });
+  };
+
+  const confirmDelete = async () => {
+    const { id, type } = deleteModal;
     try {
-      const endpoint = activeTab === 'categories' ? `/api/categories/${id}` : `/api/suppliers/${id}`;
-      await axios.delete(`http://localhost:5000${endpoint}`, {
+      const endpoint = type === 'categories' ? `/api/categories/${id}` : `/api/suppliers/${id}`;
+      await axios.delete(`http://localhost:5001${endpoint}`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
+      showToast("Deleted successfully");
       fetchData();
     } catch (err) {
       console.error(err);
-      alert('Failed to delete item. It may be in use.');
+      alert(textData.categorySupplier.errors.deleteFail);
+    } finally {
+      setDeleteModal({ show: false, id: null, type: null });
     }
   };
 
+  const showToast = (message) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const filteredCategories = categories.filter(c => 
+    c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (c.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredSuppliers = suppliers.filter((s, index, self) => 
+    (s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (s.contactPerson || '').toLowerCase().includes(searchTerm.toLowerCase())) &&
+    self.findIndex(t => t.name.toLowerCase() === s.name.toLowerCase()) === index
+  );
+
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full overflow-hidden">
-      
-      {/* Header and Tabs */}
-      <div className="border-b border-gray-100 bg-gray-50/50">
-        <div className="p-6 pb-0 flex gap-6">
+    <div className="cs-manager-container animate-fade">
+      {/* Header with Tabs */}
+      <div className="cs-header">
+        <h2 className="cs-title">{textData.categorySupplier.manageTitle}</h2>
+        <div className="cs-tabs">
           <button 
-            onClick={() => { setActiveTab('categories'); setFormData({}); setError(''); }}
-            className={`flex items-center gap-2 pb-4 px-2 font-semibold text-sm transition-colors border-b-2 ${activeTab === 'categories' ? 'border-brand-500 text-brand-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+            onClick={() => { setActiveTab('categories'); setFormData({}); setIsEditing(null); setError(''); setSearchTerm(''); }}
+            className={`cs-tab ${activeTab === 'categories' ? 'active' : ''}`}
           >
-            <LayoutDashboard size={18} /> Categories
+            <LayoutDashboard size={18} /> {textData.categorySupplier.tabs.categories}
           </button>
           <button 
-            onClick={() => { setActiveTab('suppliers'); setFormData({}); setError(''); }}
-            className={`flex items-center gap-2 pb-4 px-2 font-semibold text-sm transition-colors border-b-2 ${activeTab === 'suppliers' ? 'border-brand-500 text-brand-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+            onClick={() => { setActiveTab('suppliers'); setFormData({}); setIsEditing(null); setError(''); setSearchTerm(''); }}
+            className={`cs-tab ${activeTab === 'suppliers' ? 'active' : ''}`}
           >
-            <Users size={18} /> Suppliers
+            <Users size={18} /> {textData.categorySupplier.tabs.suppliers}
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 flex flex-col md:flex-row gap-8">
-        
-        {/* Form Section */}
-        <div className="w-full md:w-1/3 bg-gray-50 p-6 rounded-xl border border-gray-100 h-fit">
-          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-            <Plus size={18} className="mr-2 text-brand-500" />
-            Add New {activeTab === 'categories' ? 'Category' : 'Supplier'}
-          </h3>
+      <div className="cs-content-grid">
+        {/* Form Card */}
+        <div className="cs-card h-fit">
+          <div className="cs-card-title">
+            {isEditing ? <Edit size={20} color="#4f46e5" /> : <Plus size={20} color="#4f46e5" />}
+            {isEditing ? (activeTab === 'categories' ? "Edit Category" : "Edit Supplier") : (activeTab === 'categories' ? textData.categorySupplier.form.addCategory : textData.categorySupplier.form.addSupplier)}
+          </div>
+          <p className="cs-card-subtitle">
+            {isEditing ? "Update existing information in the database" : (activeTab === 'categories' ? textData.categorySupplier.form.categorySubtitle : "Add a new vendor to your database")}
+          </p>
           
-          {error && <div className="mb-4 p-3 bg-red-50 text-red-700 text-xs rounded-lg">{error}</div>}
+          {error && (
+            <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: '#fef2f2', color: '#dc2626', fontSize: '0.75rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertCircle size={14} /> {error}
+            </div>
+          )}
 
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Name</label>
-              <input required name="name" value={formData.name || ''} onChange={handleInputChange} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500" placeholder={`e.g. ${activeTab === 'categories' ? 'Electronics' : 'Acme Corp'}`}/>
+          <form onSubmit={handleSubmit}>
+            <div className="cs-form-group">
+              <label className="cs-label">
+                {activeTab === 'categories' ? textData.categorySupplier.form.name : textData.categorySupplier.form.supplierName}
+              </label>
+              <input 
+                required 
+                name="name" 
+                value={formData.name || ''} 
+                onChange={handleInputChange} 
+                className="cs-input" 
+                placeholder={activeTab === 'categories' ? textData.categorySupplier.form.placeholders.categoryName : textData.categorySupplier.form.placeholders.supplierName}
+              />
             </div>
 
             {activeTab === 'categories' ? (
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Description</label>
-                <textarea name="description" value={formData.description || ''} onChange={handleInputChange} rows="3" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500" placeholder="Optional details..."></textarea>
+              <div className="cs-form-group">
+                <label className="cs-label">{textData.categorySupplier.form.description}</label>
+                <textarea 
+                  name="description" 
+                  value={formData.description || ''} 
+                  onChange={handleInputChange} 
+                  className="cs-textarea" 
+                  placeholder={textData.categorySupplier.form.placeholders.description}
+                />
               </div>
             ) : (
               <>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Contact Person</label>
-                  <input required name="contactPerson" value={formData.contactPerson || ''} onChange={handleInputChange} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500" placeholder="John Doe"/>
+                <div className="cs-form-group">
+                  <label className="cs-label">{textData.categorySupplier.form.email}</label>
+                  <input required type="email" name="email" value={formData.email || ''} onChange={handleInputChange} className="cs-input" placeholder={textData.categorySupplier.form.placeholders.email}/>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Email</label>
-                  <input required type="email" name="email" value={formData.email || ''} onChange={handleInputChange} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500" placeholder="john@acme.com"/>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Phone</label>
-                  <input name="phone" value={formData.phone || ''} onChange={handleInputChange} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500" placeholder="555-0199"/>
+                <div className="cs-form-group">
+                  <label className="cs-label">{textData.categorySupplier.form.phone}</label>
+                  <input name="phone" value={formData.phone || ''} onChange={handleInputChange} className="cs-input" placeholder={textData.categorySupplier.form.placeholders.phone}/>
                 </div>
               </>
             )}
 
-            <button type="submit" disabled={isSubmitting} className="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex justify-center items-center mt-4">
-              {isSubmitting ? <Loader2 className="animate-spin h-4 w-4" /> : 'Create'}
+            <button type="submit" disabled={isSubmitting} className="cs-btn-primary">
+              {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : (isEditing ? "Update" : (activeTab === 'categories' ? textData.categorySupplier.form.buttons.create : textData.categorySupplier.form.buttons.createSupplier))}
             </button>
+            
+            {isEditing && (
+              <button type="button" onClick={handleCancelEdit} className="cs-btn-secondary" style={{ width: '100%', marginTop: '8px', padding: '10px', backgroundColor: 'transparent', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>
+                Cancel Edit
+              </button>
+            )}
           </form>
         </div>
 
         {/* List Section */}
-        <div className="w-full md:w-2/3 border border-gray-100 rounded-xl overflow-hidden shadow-sm">
-           <table className="w-full text-left border-collapse">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                 <tr>
-                    <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Name</th>
-                    {activeTab === 'categories' ? (
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Description</th>
-                    ) : (
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Contact Info</th>
-                    )}
-                    <th className="px-6 py-3 text-right"></th>
-                 </tr>
+        <div className="cs-list-section">
+          <div className="cs-search-container">
+            <Search className="cs-search-icon" size={18} />
+            <input 
+              type="text" 
+              className="cs-search-input" 
+              placeholder={`Search ${activeTab}...`} 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <div className="cs-table-container">
+            <table className="cs-table">
+              <thead>
+                <tr>
+                  <th>{textData.categorySupplier.table.name}</th>
+                  {activeTab === 'categories' ? (
+                    <th>{textData.categorySupplier.table.description}</th>
+                  ) : (
+                    <th>{textData.categorySupplier.table.contactInfo}</th>
+                  )}
+                  <th style={{ textAlign: 'right' }}>{textData.categorySupplier.table.actions}</th>
+                </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 bg-white">
+              <tbody>
                 {loading ? (
-                  <tr><td colSpan="3" className="p-8 text-center text-gray-400"><Loader2 className="animate-spin h-6 w-6 mx-auto" /></td></tr>
+                  <tr><td colSpan="3" style={{ textAlign: 'center', padding: '48px' }}><Loader2 className="animate-spin mx-auto" size={24} /></td></tr>
                 ) : activeTab === 'categories' ? (
-                  categories.length === 0 ? <tr><td colSpan="3" className="p-6 text-center text-gray-500">No categories found</td></tr> :
-                  categories.map(c => (
-                    <tr key={c._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 font-medium text-gray-900">{c.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{c.description || '-'}</td>
-                      <td className="px-6 py-4 text-right">
-                        <button onClick={() => handleDelete(c._id)} className="text-red-400 hover:text-red-600"><Trash2 size={16} /></button>
+                  filteredCategories.length === 0 ? <tr><td colSpan="3" style={{ textAlign: 'center', padding: '24px', color: '#64748b' }}>{textData.categorySupplier.table.noCategories}</td></tr> :
+                  filteredCategories.map(c => (
+                    <tr key={c._id}>
+                      <td style={{ fontWeight: 600 }}>{c.name}</td>
+                      <td>{c.description || '-'}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                          <button onClick={() => handleEditClick(c, 'categories')} className="cs-action-btn cs-btn-edit"><Edit size={16} /></button>
+                          <button onClick={() => handleDeleteClick(c._id, 'categories')} className="cs-action-btn cs-btn-delete"><Trash2 size={16} /></button>
+                        </div>
                       </td>
                     </tr>
                   ))
                 ) : (
-                  suppliers.length === 0 ? <tr><td colSpan="3" className="p-6 text-center text-gray-500">No suppliers found</td></tr> :
-                  suppliers.map(s => (
-                    <tr key={s._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 font-medium text-gray-900">{s.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        <div>{s.contactPerson}</div>
-                        <div className="text-xs text-gray-400">{s.email}</div>
+                  filteredSuppliers.length === 0 ? <tr><td colSpan="3" style={{ textAlign: 'center', padding: '24px', color: '#64748b' }}>{textData.categorySupplier.table.noSuppliers}</td></tr> :
+                  filteredSuppliers.map(s => (
+                    <tr key={s._id}>
+                      <td style={{ fontWeight: 600 }}>{s.name}</td>
+                      <td style={{ fontSize: '0.8125rem', lineHeight: '1.4' }}>
+                        {(s.email || s.phone || s.address) ? (
+                          <>
+                            {s.email && (
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                <span style={{ color: '#64748b', fontWeight: 500 }}>Email:</span>
+                                <span style={{ color: '#4f46e5' }}>{s.email}</span>
+                              </div>
+                            )}
+                            {s.phone && (
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                <span style={{ color: '#64748b', fontWeight: 500 }}>Phone:</span>
+                                <span style={{ color: '#1e293b' }}>{s.phone}</span>
+                              </div>
+                            )}
+                            {s.address && (
+                              <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
+                                <span style={{ color: '#64748b', fontWeight: 500 }}>Addr:</span>
+                                <span style={{ color: '#64748b', fontSize: '0.75rem' }}>{s.address}</span>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>No contact info provided</span>
+                        )}
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <button onClick={() => handleDelete(s._id)} className="text-red-400 hover:text-red-600"><Trash2 size={16} /></button>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                          <button onClick={() => handleEditClick(s, 'suppliers')} className="cs-action-btn cs-btn-edit"><Edit size={16} /></button>
+                          <button onClick={() => handleDeleteClick(s._id, 'suppliers')} className="cs-action-btn cs-btn-delete"><Trash2 size={16} /></button>
+                        </div>
                       </td>
                     </tr>
                   ))
                 )}
               </tbody>
-           </table>
+            </table>
+          </div>
         </div>
-
       </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="cs-toast">
+          <CheckCircle2 size={18} />
+          {toast}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.show && (
+        <div className="cs-modal-overlay">
+          <div className="cs-modal">
+            <div style={{ backgroundColor: '#fee2e2', width: '48px', height: '48px', borderRadius: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto 20px', color: '#ef4444' }}>
+              <Trash2 size={24} />
+            </div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b', marginBottom: '8px' }}>Are you sure?</h3>
+            <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '24px' }}>
+              {textData.categorySupplier.errors.deleteConfirm}
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                onClick={() => setDeleteModal({ show: false, id: null, type: null })}
+                style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#ffffff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDelete}
+                style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: '#ef4444', color: '#ffffff', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

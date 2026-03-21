@@ -1,165 +1,206 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, Filter, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { Pencil, Trash2, Search, Loader2, Package, X } from 'lucide-react';
+import textData from '../constants/textData';
+import './ProductManagement.css';
+
+const API = 'http://localhost:5001/api';
 
 export default function ProductList() {
   const { user } = useAuth();
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
+  
+  // Edit Modal State
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [categories, setCategories] = useState([]);
+  const [saving, setSaving] = useState(false);
 
-  // Fetch Categories on mount
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const res = await axios.get('http://127.0.0.1:5000/api/categories', {
-          headers: { Authorization: `Bearer ${user.token}` }
-        });
-        setCategories(res.data);
-      } catch (err) {
-        console.error('Failed to fetch categories:', err);
-      }
-    };
-    if (user?.token) fetchCategories();
+    fetchProducts();
+    fetchCategories();
   }, [user]);
 
-  // Fetch Products based on Search/Filter
   const fetchProducts = async () => {
+    if (!user?.token) return;
     setLoading(true);
     try {
-      let url = 'http://127.0.0.1:5000/api/products';
-      const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
-      if (categoryFilter) params.append('category', categoryFilter);
-      if (params.toString()) url += `?${params.toString()}`;
-
-      const res = await axios.get(url, {
+      const res = await axios.get(`${API}/products`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
-      setProducts(res.data);
+      console.log('[ProductList] Data loaded:', res.data);
+      if (Array.isArray(res.data)) {
+        setProducts(res.data);
+      } else if (res.data?.products) {
+        setProducts(res.data.products);
+      } else {
+        setProducts([]);
+      }
     } catch (err) {
-      console.error(err);
+      console.error('Fetch products error:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchProducts();
-  }, [user, categoryFilter]); 
+  const fetchCategories = async () => {
+    try {
+      const res = await axios.get(`${API}/categories`, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      setCategories(res.data);
+    } catch (err) {
+      console.error('Fetch categories error:', err);
+    }
+  };
 
-  const handleSearch = (e) => {
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this product?')) {
+      try {
+        await axios.delete(`${API}/products/${id}`, {
+          headers: { Authorization: `Bearer ${user.token}` }
+        });
+        fetchProducts();
+      } catch (err) {
+        alert('Delete failed');
+      }
+    }
+  };
+
+  const handleEdit = (product) => {
+    setSelectedProduct(product);
+    setEditForm({ ...product, category: product.category?._id || product.category });
+    setShowEditModal(true);
+  };
+
+  const onUpdateProduct = async (e) => {
     e.preventDefault();
-    fetchProducts();
+    setSaving(true);
+    try {
+      await axios.put(`${API}/products/${selectedProduct._id}`, editForm, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      setShowEditModal(false);
+      fetchProducts();
+    } catch (err) {
+      alert('Update failed');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const getStatusBadge = (status) => {
-    if (status === 'Pending Approval') return <span className="sd-badge pending">Pending</span>;
-    if (status === 'Approved' || status === 'Active') return <span className="sd-badge approved">Approved</span>;
-    return <span className="sd-badge">{status}</span>;
-  };
+  const filteredProducts = products.filter(p => 
+    p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.productId?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="sd-card" style={{ padding: 0, overflow: 'hidden' }}>
-
-      {/* Header and Controls */}
-      <div className="sd-card-header" style={{ margin: 0, padding: '1.5rem', borderBottom: '1px solid var(--sd-border-color)' }}>
-        <h3 className="sd-card-title">Product List</h3>
-      </div>
-
-      <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--sd-border-color)', backgroundColor: '#fafafb' }}>
-        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-
-          <div style={{ flex: 1, minWidth: '200px' }}>
-            <label className="sd-label" style={{ fontSize: '0.75rem', marginBottom: '0.25rem' }}>Search Name</label>
-            <div style={{ position: 'relative' }}>
-              <Search size={16} style={{ position: 'absolute', left: '10px', top: '10px', color: 'var(--sd-text-muted)' }} />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="sd-input"
-                style={{ paddingLeft: '2.25rem', height: '36px' }}
-                placeholder="Product name..."
-              />
-            </div>
-          </div>
-
-          <div style={{ minWidth: '180px' }}>
-            <label className="sd-label" style={{ fontSize: '0.75rem', marginBottom: '0.25rem' }}>Filter Category</label>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="sd-select"
-              style={{ height: '36px' }}
-            >
-              <option value="">All Categories</option>
-              {categories.map((c) => (
-                <option key={c._id} value={c._id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <button type="submit" className="sd-btn sd-btn-primary" style={{ height: '36px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Filter size={16} /> Search
-          </button>
-        </form>
-      </div>
-
-      {/* Table Area */}
-      <div className="sd-table-container">
-        <table className="sd-table">
-          <thead>
-            <tr>
-              <th>Product ID</th>
-              <th>Product Name</th>
-              <th>Category</th>
-              <th>Quantity Available</th>
-              <th>Storage Location</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '3rem' }}>
-                  <Loader2 className="animate-spin text-muted" size={32} style={{ margin: '0 auto 1rem' }} /> Loading inventory...
-                </td>
-              </tr>
-            ) : products.length === 0 ? (
-              <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: 'var(--sd-text-muted)' }}>
-                  No products found.
-                </td>
-              </tr>
-            ) : (
-              products.map((product) => (
-                <tr key={product._id}>
-                  <td style={{ fontFamily: 'monospace', color: 'var(--sd-text-muted)', fontSize: '0.8rem' }}>{product.productId}</td>
-                  <td style={{ fontWeight: '500' }}>{product.name}</td>
-                  <td>{typeof product.category === 'object' ? product.category?.name : (product.category || 'Uncategorized')}</td>
-                  <td>{product.quantity}</td>
-                  <td>{product.storageLocation}</td>
-                  <td>{getStatusBadge(product.status)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination Footer (Fake) */}
-      <div style={{ padding: '0.75rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--sd-border-color)', backgroundColor: '#fff' }}>
-        <span style={{ fontSize: '0.75rem', color: 'var(--sd-text-muted)' }}>Showing {products.length} entries</span>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="sd-btn sd-btn-secondary" disabled style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}>Prev</button>
-          <button className="sd-btn sd-btn-secondary" disabled style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}>Next</button>
+    <div className="pl-container" style={{ padding: '1rem' }}>
+      <div className="pl-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{textData.productList.title}</h2>
+        <div style={{ position: 'relative', width: '300px' }}>
+          <Search size={18} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+          <input 
+            type="text" 
+            placeholder={textData.productList.searchPlaceholder} 
+            className="pm-input" 
+            style={{ paddingLeft: '2.5rem', width: '100%' }}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
       </div>
 
+      <div className="pm-table-card">
+        <div className="pm-table-container">
+          <table className="pm-table">
+            <thead>
+              <tr>
+                <th>{textData.productList.table.img}</th>
+                <th>{textData.productList.table.sku}</th>
+                <th>{textData.productList.table.name}</th>
+                <th>{textData.productList.table.category}</th>
+                <th>{textData.productList.table.qty}</th>
+                <th>{textData.productList.table.price}</th>
+                <th>{textData.productList.table.status}</th>
+                <th>{textData.productList.table.actions}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan="8" style={{ textAlign: 'center', padding: '3rem' }}><Loader2 className="animate-spin" /></td></tr>
+              ) : filteredProducts.length === 0 ? (
+                <tr><td colSpan="8" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>No products found.</td></tr>
+              ) : filteredProducts.map(p => (
+                <tr key={p._id}>
+                  <td>
+                    <div style={{ width: '36px', height: '36px', background: '#f1f5f9', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {p.productImage ? <img src={p.productImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px' }} /> : <Package size={18} color="#94a3b8" />}
+                    </div>
+                  </td>
+                  <td style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>{p.productId}</td>
+                  <td style={{ fontWeight: 600 }}>{p.name}</td>
+                  <td>{p.category?.name || 'N/A'}</td>
+                  <td>{p.quantity} {p.unitType || 'pcs'}</td>
+                  <td>₹{p.sellingPrice?.toLocaleString()}</td>
+                  <td>
+                    <span className={`pm-badge ${p.status === 'Active' ? 'pm-badge-active' : 'pm-badge-low'}`}>
+                      {p.status}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button onClick={() => handleEdit(p)} title="Edit" style={{ background: '#f1f5f9', border: 'none', padding: '6px', borderRadius: '4px', cursor: 'pointer', color: '#6366f1' }}><Pencil size={16} /></button>
+                      <button onClick={() => handleDelete(p._id)} title="Delete" style={{ background: '#f1f5f9', border: 'none', padding: '6px', borderRadius: '4px', cursor: 'pointer', color: '#ef4444' }}><Trash2 size={16} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: 'white', padding: '2rem', borderRadius: '12px', width: '400px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <h3>{textData.productList.editModal.title}</h3>
+              <button onClick={() => setShowEditModal(false)} style={{ background: 'none', border: 'none' }}><X size={20} /></button>
+            </div>
+            <form onSubmit={onUpdateProduct}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ fontSize: '0.8rem', color: '#64748b' }}>Product Name</label>
+                <input className="pm-input" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
+              </div>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ fontSize: '0.8rem', color: '#64748b' }}>Category</label>
+                <select className="pm-select" value={editForm.category} onChange={e => setEditForm({ ...editForm, category: e.target.value })}>
+                  {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: '#64748b' }}>{textData.productList.editModal.qty}</label>
+                  <input type="number" className="pm-input" value={editForm.quantity} onChange={e => setEditForm({ ...editForm, quantity: e.target.value })} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: '#64748b' }}>{textData.productList.editModal.price}</label>
+                  <input type="number" className="pm-input" value={editForm.sellingPrice} onChange={e => setEditForm({ ...editForm, sellingPrice: e.target.value })} />
+                </div>
+              </div>
+              <button type="submit" className="sd-btn sd-btn-primary" style={{ width: '100%' }} disabled={saving}>
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

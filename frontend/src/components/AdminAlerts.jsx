@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { AlertTriangle, AlertCircle, PackageX, Loader2 } from 'lucide-react';
+import textData from '../constants/textData';
 
 export default function AdminAlerts() {
   const { user } = useAuth();
@@ -13,7 +14,7 @@ export default function AdminAlerts() {
       try {
         // Fetch all products, we'll filter them locally for now, 
         // though a dedicated /api/products/alerts route would be better at scale.
-        const res = await axios.get('http://localhost:5000/api/products', {
+        const res = await axios.get('http://localhost:5001/api/products', {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         
@@ -44,26 +45,26 @@ export default function AdminAlerts() {
         <div>
           <h2 className="text-xl font-bold text-red-900 flex items-center">
             <AlertTriangle className="w-5 h-5 mr-2 text-red-500" />
-            Inventory Action Required
+            {textData.adminAlerts.title}
           </h2>
-          <p className="text-sm text-red-700/70 mt-1">Products currently at or below their defined minimum stock threshold.</p>
+          <p className="text-sm text-red-700/70 mt-1">{textData.adminAlerts.subtitle}</p>
         </div>
-        <div className="bg-red-100 text-red-800 font-bold px-3 py-1 rounded-full">{alerts.length} Warnings</div>
+        <div className="bg-red-100 text-red-800 font-bold px-3 py-1 rounded-full">{alerts.length} {textData.adminAlerts.warningsLabel}</div>
       </div>
 
       <div className="flex-1 overflow-auto p-6 space-y-4 bg-slate-50/30">
         {loading ? (
           <div className="flex flex-col items-center justify-center p-12 text-slate-400">
              <Loader2 className="animate-spin h-8 w-8 mb-4 border-slate-200 border-t-brand-500" />
-             <p>Analyzing inventory levels...</p>
+             <p>{textData.adminAlerts.loading}</p>
           </div>
         ) : alerts.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 text-emerald-600 bg-emerald-50/50 rounded-2xl border border-emerald-100">
             <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4 text-emerald-500 shadow-sm border border-emerald-200">
                <AlertCircle size={32} />
             </div>
-            <h3 className="text-xl font-bold mb-1">Stock Levels Healthy!</h3>
-            <p className="text-emerald-600/70 text-sm">No active products are below their minimum threshold.</p>
+            <h3 className="text-xl font-bold mb-1">{textData.adminAlerts.empty.title}</h3>
+            <p className="text-emerald-600/70 text-sm">{textData.adminAlerts.empty.message}</p>
           </div>
         ) : (
           alerts.map(item => (
@@ -81,20 +82,20 @@ export default function AdminAlerts() {
                   </div>
                   <div>
                     <h4 className="font-bold text-slate-900">{item.name}</h4>
-                    <p className="text-sm text-slate-500 font-mono mt-0.5 mb-2">SKU: {item.productId}</p>
+                    <p className="text-sm text-slate-500 font-mono mt-0.5 mb-2">{textData.adminAlerts.table.sku}: {item.productId}</p>
                     <div className="flex gap-4">
-                       <span className="text-xs font-semibold text-slate-500">Category: <span className="text-slate-700">{item.category?.name || 'N/A'}</span></span>
-                       <span className="text-xs font-semibold text-slate-500">Supplier: <span className="text-slate-700">{item.supplier?.name || 'N/A'}</span></span>
+                       <span className="text-xs font-semibold text-slate-500">{textData.adminAlerts.table.category}: <span className="text-slate-700">{item.category?.name || 'N/A'}</span></span>
+                       <span className="text-xs font-semibold text-slate-500">{textData.adminAlerts.table.supplier}: <span className="text-slate-700">{item.supplier?.name || 'N/A'}</span></span>
                     </div>
                   </div>
                </div>
                <div className="text-right">
-                  <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Current Stock</div>
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{textData.adminAlerts.table.currentStock}</div>
                   <div className={`text-4xl font-black ${item.quantity === 0 ? 'text-red-600' : 'text-amber-600'}`}>
-                    {item.quantity}
+                    {item.quantity} <span className="text-xl font-bold">{item.unitType || 'pcs'}</span>
                   </div>
                   <div className="text-xs font-semibold text-slate-500 mt-1">
-                    Req Min: {item.minStockLevel}
+                    {textData.adminAlerts.table.reqMin}: {item.minStockLevel}
                   </div>
                </div>
             </div>

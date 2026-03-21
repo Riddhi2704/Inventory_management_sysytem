@@ -21,6 +21,7 @@ const managerRoutes = require('./routes/managerRoutes');
 const logRoutes = require('./routes/logRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const supplierRoutes = require('./routes/supplierRoutes');
+const purchaseOrderRoutes = require('./routes/purchaseOrderRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
@@ -29,6 +30,7 @@ app.use('/api/manager', managerRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/suppliers', supplierRoutes);
+app.use('/api/purchase-orders', purchaseOrderRoutes);
 
 // Routes boundary
 

@@ -9,6 +9,7 @@ const productSchema = new mongoose.Schema({
   purchasePrice: { type: Number, required: true },
   sellingPrice: { type: Number, required: true },
   quantity: { type: Number, required: true, default: 0 },
+  unitType: { type: String, required: true, default: 'pcs' },
   description: { type: String },
   storageLocation: { type: String }, // shop / rack / Warehouse section
   shopName: { type: String, required: true },

@@ -1,6 +1,7 @@
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 const Supplier = require('../models/Supplier');
+const MovementLog = require('../models/MovementLog');
 const mongoose = require('mongoose');
 
 // @desc    Add a new product
@@ -8,7 +9,7 @@ const mongoose = require('mongoose');
 // @access  Private (Staff, Manager, Admin)
 const addProduct = async (req, res) => {
   try {
-    const { productId, name, category, brand, supplier, purchasePrice, sellingPrice, quantity, description, storageLocation, productImage } = req.body;
+    const { productId, name, category, brand, supplier, purchasePrice, sellingPrice, quantity, unitType, description, storageLocation, productImage } = req.body;
     const shopName = req.user.shopName;
 
     if (!shopName) {
@@ -17,16 +18,21 @@ const addProduct = async (req, res) => {
 
     let finalSupplierId = supplier;
     if (supplier && !(/^[0-9a-fA-F]{24}$/.test(supplier))) {
-      let existingSupplier = await Supplier.findOne({ name: { $regex: new RegExp(`^${supplier}$`, 'i') } });
+      let existingSupplier = await Supplier.findOne({ 
+        name: { $regex: new RegExp(`^${supplier}$`, 'i') },
+        shopName 
+      });
       if (!existingSupplier) {
-        existingSupplier = await Supplier.create({ name: supplier });
+        existingSupplier = await Supplier.create({ name: supplier, shopName });
       }
       finalSupplierId = existingSupplier._id;
     }
 
     let finalCategoryId = category;
     if (category && !(/^[0-9a-fA-F]{24}$/.test(category))) {
-      let existingCategory = await Category.findOne({ name: { $regex: new RegExp(`^${category}$`, 'i') } });
+      let existingCategory = await Category.findOne({ 
+        name: { $regex: new RegExp(`^${category}$`, 'i') }
+      });
       if (!existingCategory) {
         existingCategory = await Category.create({ name: category });
       }
@@ -41,7 +47,7 @@ const addProduct = async (req, res) => {
     }
 
     const product = await Product.create({
-      productId, name, category: finalCategoryId, brand, supplier: finalSupplierId, purchasePrice, sellingPrice, quantity, description, storageLocation, productImage,
+      productId, name, category: finalCategoryId, brand, supplier: finalSupplierId, purchasePrice, sellingPrice, quantity, unitType, description, storageLocation, productImage,
       shopName,
       status,
       addedBy: req.user.id
@@ -53,20 +59,79 @@ const addProduct = async (req, res) => {
   }
 };
 
+// @desc    Update a product's details
+// @route   PUT /api/products/:id
+// @access  Private (Staff, Manager, Admin)
+const updateProduct = async (req, res) => {
+  try {
+    const shopName = req.user.shopName;
+    const shopNameRegex = new RegExp(`^${shopName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    const product = await Product.findOne({ _id: req.params.id, shopName: shopNameRegex });
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found or access denied' });
+    }
+
+    const { name, brand, quantity, unitType, purchasePrice, sellingPrice, storageLocation, description, category } = req.body;
+
+    // Handle category: might be an ObjectId or a name string
+    let finalCategoryId = category;
+    if (category && !(/^[0-9a-fA-F]{24}$/.test(category))) {
+      let existingCategory = await Category.findOne({
+        name: { $regex: new RegExp(`^${category}$`, 'i') }
+      });
+      if (!existingCategory) {
+        existingCategory = await Category.create({ name: category });
+      }
+      finalCategoryId = existingCategory._id;
+    }
+
+    if (name !== undefined) product.name = name;
+    if (brand !== undefined) product.brand = brand;
+    if (quantity !== undefined) product.quantity = Number(quantity);
+    if (unitType !== undefined) product.unitType = unitType;
+    if (purchasePrice !== undefined) product.purchasePrice = Number(purchasePrice);
+    if (sellingPrice !== undefined) product.sellingPrice = Number(sellingPrice);
+    if (storageLocation !== undefined) product.storageLocation = storageLocation;
+    if (description !== undefined) product.description = description;
+    if (finalCategoryId) product.category = finalCategoryId;
+
+    const updatedProduct = await product.save();
+
+    // Log the edit action in Recent Activity
+    await MovementLog.create({
+      product: updatedProduct._id,
+      quantityMoved: 0,
+      movedBy: req.user.id,
+      reason: 'Edited',
+      shopName
+    });
+
+    res.json(updatedProduct);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc    Get all products (with search/filter)
 // @route   GET /api/products
 // @access  Private
 const getProducts = async (req, res) => {
   try {
-    const { search, category, status, lowStock } = req.query;
-    let query = {};
-    
-    // Enforce shop-based filtering
-    if (req.user && req.user.shopName) {
-      query.shopName = req.user.shopName;
+    const shopName = req.user.shopName?.trim();
+    if (!shopName) {
+      return res.status(400).json({ message: 'User does not belong to a shop' });
     }
-
-    console.log("GET Products Query Params:", req.query);
+    const { search, category, status, lowStock } = req.query;
+    console.log(`[getProducts] UserID: ${req.user.id}, Role: ${req.user.role}, Shop: [${shopName}]`);
+    console.log(`[getProducts] Query Params: ${JSON.stringify(req.query)}`);
+    
+    // Use a more relaxed filter first to diagnose
+    const safeShopName = shopName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+    const shopFilter = { shopName: { $regex: new RegExp(`^${safeShopName}$`, 'i') } };
+    let query = { ...shopFilter };
+    console.log('[getProducts] Constructed base query:', JSON.stringify(query));
+    
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -78,21 +143,64 @@ const getProducts = async (req, res) => {
       // Find where quantity <= minStockLevel
       query.$expr = { $lte: ['$quantity', '$minStockLevel'] };
     }
-    if (category) {
-      // Assuming category is passed as an ObjectId or we would need to map category name to ID
-      query.category = category;
-    }
-    if (status) {
-      query.status = status;
+    if (category) query.category = category;
+    if (status) query.status = status;
+    if (req.query.supplier) query.supplier = req.query.supplier; // Handle supplier filter
+
+    // Stock Status Filter (Special Logic)
+    if (req.query.stockStatus) {
+      if (req.query.stockStatus === 'Low Stock') {
+        query.$expr = { $and: [
+          { $gt: ['$quantity', 0] },
+          { $lte: ['$quantity', '$minStockLevel'] }
+        ]};
+      } else if (req.query.stockStatus === 'Out of Stock') {
+        query.quantity = 0;
+      } else if (req.query.stockStatus === 'In Stock') {
+        query.$expr = { $gt: ['$quantity', '$minStockLevel'] };
+      }
     }
 
-    // Role-based filtering removed to allow all Staff members in the same shop to see shop products
+    if (lowStock === 'true') {
+      query.$expr = { $lte: ['$quantity', '$minStockLevel'] };
+    }
+
+    // Pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 1000; // Default large limit if not specified
+    const skip = (page - 1) * limit;
+
+    console.log('[getProducts] Final query before execution:', JSON.stringify(query));
+
+    const total = await Product.countDocuments(query);
+    console.log(`[getProducts] countDocuments complete: ${total}`);
 
     const products = await Product.find(query)
       .populate('category', 'name')
-      .populate('supplier', 'name');
+      .populate('supplier', 'name')
+      .populate('addedBy', 'fullName')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
       
-    res.json(products);
+    console.log(`[getProducts] find complete: Found ${products.length} products`);
+    console.log(`[getProducts] Found ${total} total documents, returning ${products.length} products`);
+    
+    // Backwards Compatibility:
+    // If frontend requests pagination, return object. Otherwise return array.
+    if (req.query.paginate === 'true') {
+      res.json({
+        products,
+        pagination: {
+          total,
+          page,
+          limit,
+          pages: Math.ceil(total / limit)
+        }
+      });
+    } else {
+      res.json(products);
+    }
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -104,12 +212,13 @@ const getProducts = async (req, res) => {
 const updateProductStatus = async (req, res) => {
   try {
     const { status } = req.body;
+    const shopName = req.user.shopName;
     
     if (!['Active', 'Rejected'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
     }
 
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findOne({ _id: req.params.id, shopName });
 
     if (product) {
       product.status = status;
@@ -117,7 +226,7 @@ const updateProductStatus = async (req, res) => {
       const updatedProduct = await product.save();
       res.json(updatedProduct);
     } else {
-      res.status(404).json({ message: 'Product not found' });
+      res.status(404).json({ message: 'Product not found or access denied' });
     }
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -137,7 +246,14 @@ const updateProductQuantity = async (req, res) => {
       product.quantity += Number(quantityAdded);
       const updatedProduct = await product.save();
 
-      // Here you would also create a MovementLog ideally
+      // Create a MovementLog for the stock update
+      await MovementLog.create({
+        product: updatedProduct._id,
+        quantityMoved: Math.abs(quantityAdded),
+        movedBy: req.user.id,
+        reason: quantityAdded >= 0 ? 'Restock' : 'Adjustment',
+        shopName: req.user.shopName
+      });
 
       res.json(updatedProduct);
     } else {
@@ -148,4 +264,74 @@ const updateProductQuantity = async (req, res) => {
   }
 };
 
-module.exports = { addProduct, getProducts, updateProductStatus, updateProductQuantity };
+// @desc    Delete a product
+// @route   DELETE /api/products/:id
+// @access  Private (Staff, Manager, Admin)
+const deleteProduct = async (req, res) => {
+  try {
+    const shopName = req.user.shopName;
+    const product = await Product.findOne({ _id: req.params.id, shopName });
+
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found or access denied' });
+    }
+
+    // Log the delete action in Recent Activity before removing
+    await MovementLog.create({
+      product: product._id,
+      quantityMoved: 0,
+      movedBy: req.user.id,
+      reason: `Deleted: ${product.name}`,
+      shopName
+    });
+
+    await product.deleteOne();
+    res.json({ message: 'Product deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get Product Summary Stats
+// @route   GET /api/products/stats
+// @access  Private
+const getProductStats = async (req, res) => {
+  try {
+    const shopName = req.user.shopName?.trim();
+    const shopFilter = { shopName: { $regex: shopName, $options: 'i' } };
+    
+    console.log(`[getProductStats] UserID: ${req.user.id}, Role: ${req.user.role}, Shop: [${shopName}]`);
+    if (!shopName) {
+      return res.status(400).json({ message: 'Shop name not found' });
+    }
+    
+    console.log(`[getProductStats] Applied filter:`, shopFilter);
+
+    const totalProducts = await Product.countDocuments(shopFilter);
+    const outOfStock = await Product.countDocuments({ ...shopFilter, quantity: 0 });
+    const lowStock = await Product.countDocuments({ 
+      ...shopFilter, 
+      $expr: { $and: [
+        { $gt: ['$quantity', 0] },
+        { $lte: ['$quantity', '$minStockLevel'] }
+      ]}
+    });
+
+    const activeProducts = await Product.find({ ...shopFilter, status: 'Active' });
+    let totalInventoryValue = 0;
+    activeProducts.forEach(p => {
+      totalInventoryValue += (p.sellingPrice * p.quantity);
+    });
+
+    res.json({
+      totalProducts,
+      outOfStock,
+      lowStock,
+      totalInventoryValue
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { addProduct, getProducts, updateProduct, deleteProduct, updateProductStatus, updateProductQuantity, getProductStats };
