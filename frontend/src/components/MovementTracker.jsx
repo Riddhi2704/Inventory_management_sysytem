@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { Search, MapPin, ScanLine, Loader2, Info } from 'lucide-react';
+import textData from '../constants/textData';
 
 export default function MovementTracker({ prefillProduct }) {
   const { user } = useAuth();
@@ -49,7 +50,7 @@ export default function MovementTracker({ prefillProduct }) {
     }
     console.log("Fetching products for:", searchTerm); // DEBUG
     try {
-      const res = await axios.get(`http://127.0.0.1:5000/api/products?search=${searchTerm.trim()}`, {
+      const res = await axios.get(`http://localhost:5001/api/products?search=${searchTerm.trim()}`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       console.log("Search results received:", res.data.length, res.data); // DEBUG
@@ -96,11 +97,11 @@ export default function MovementTracker({ prefillProduct }) {
         toLocation: formData.toLocation
       };
 
-      const res = await axios.post('http://127.0.0.1:5000/api/logs/movement', payload, {
+      const res = await axios.post('http://localhost:5001/api/logs/movement', payload, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
 
-      setSuccess(`Successfully recorded movement! New stock level: ${res.data.updatedQuantity}`);
+      setSuccess(`${textData.movementTracker.success} ${res.data.updatedQuantity}`);
 
       // Update local selected product quantity to reflect change
       setSelectedProduct({
@@ -111,7 +112,7 @@ export default function MovementTracker({ prefillProduct }) {
       setFormData({ ...formData, quantityMoved: '' });
 
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to record movement. Check stock levels.');
+      setError(err.response?.data?.message || textData.movementTracker.errorUpdate);
     } finally {
       setLoading(false);
     }
@@ -122,23 +123,23 @@ export default function MovementTracker({ prefillProduct }) {
 
       <div className="sd-card-header">
         <ScanLine size={24} style={{ color: 'var(--sd-primary-color)' }} />
-        <h3 className="sd-card-title">Record Product Movement</h3>
+        <h3 className="sd-card-title">{textData.movementTracker.title}</h3>
       </div>
-      <p style={{ color: 'var(--sd-text-muted)', marginBottom: '2rem' }}>Scan or search for a product to log physical movement, damages, or restocks.</p>
+      <p style={{ color: 'var(--sd-text-muted)', marginBottom: '2rem' }}>{textData.movementTracker.subtitle}</p>
 
       <div className="sd-form-grid" style={{ alignItems: 'flex-start' }}>
 
         {/* Left Column - Product Search & Info */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div style={{ position: 'relative' }}>
-            <label className="sd-label" style={{ display: 'block', marginBottom: '0.5rem' }}>Search Product (Name or SKU)</label>
+            <label className="sd-label" style={{ display: 'block', marginBottom: '0.5rem' }}>{textData.movementTracker.searchLabel}</label>
             <div style={{ position: 'relative' }}>
               <Search size={20} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--sd-text-muted)' }} />
                 <input
                   type="text"
                   className="sd-input"
                   style={{ paddingLeft: '2.5rem' }}
-                  placeholder="e.g. Wireless Mouse"
+                  placeholder={textData.movementTracker.searchPlaceholder}
                   value={searchTerm}
                   onChange={(e) => {
                     console.log("Search input change:", e.target.value); // DEBUG
@@ -151,11 +152,11 @@ export default function MovementTracker({ prefillProduct }) {
                   onClick={() => { console.log("Manual search triggered"); searchProducts(); }}
                   style={{ position: 'absolute', right: selectedProduct ? '60px' : '10px', top: '50%', transform: 'translateY(-50%)', background: 'var(--sd-primary-color)', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', fontSize: '0.75rem', cursor: 'pointer' }}
                 >
-                  Search
+                  {textData.movementTracker.searchButton}
                 </button>
                 {selectedProduct && (
                   <button type="button" onClick={handleClearSelection} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--sd-text-muted)', cursor: 'pointer' }}>
-                    CLEAR
+                    {textData.movementTracker.clearButton}
                   </button>
                 )}
               </div>
@@ -180,14 +181,14 @@ export default function MovementTracker({ prefillProduct }) {
                         <div style={{ fontSize: '0.75rem', color: 'var(--sd-text-muted)' }}>SKU: {p.productId}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.875rem', fontWeight: 'bold', color: 'var(--sd-primary-color)' }}>Qty: {p.quantity}</div>
+                        <div style={{ fontSize: '0.875rem', fontWeight: 'bold', color: 'var(--sd-primary-color)' }}>Qty: {p.quantity} {p.unitType || 'pcs'}</div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--sd-text-muted)' }}>{p.location || 'No location'}</div>
                       </div>
                     </div>
                   ))
                 ) : (
                   <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--sd-text-muted)' }}>
-                    No products found for "{searchTerm}"
+                    {textData.movementTracker.noProducts} "{searchTerm}"
                   </div>
                 )}
               </div>
@@ -201,13 +202,13 @@ export default function MovementTracker({ prefillProduct }) {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#60a5fa', textTransform: 'uppercase' }}>Current Stock</span>
-                  <div style={{ fontWeight: '700', fontSize: '1.5rem', color: '#1d4ed8' }}>{selectedProduct.quantity}</div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#60a5fa', textTransform: 'uppercase' }}>{textData.movementTracker.currentStock}</span>
+                  <div style={{ fontWeight: '700', fontSize: '1.5rem', color: '#1d4ed8' }}>{selectedProduct.quantity} {selectedProduct.unitType || 'pcs'}</div>
                 </div>
                 <div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#60a5fa', textTransform: 'uppercase' }}>Location</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#60a5fa', textTransform: 'uppercase' }}>{textData.movementTracker.location}</span>
                   <div style={{ fontWeight: '500', color: '#1d4ed8', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <MapPin size={16} /> {selectedProduct.location || 'Unassigned'}
+                    <MapPin size={16} /> {selectedProduct.location || textData.movementTracker.unassigned}
                   </div>
                 </div>
               </div>
@@ -215,7 +216,7 @@ export default function MovementTracker({ prefillProduct }) {
           ) : (
             <div style={{ border: '2px dashed var(--sd-border-color)', borderRadius: '12px', padding: '2.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--sd-text-muted)', textAlign: 'center', backgroundColor: '#fafafb' }}>
               <ScanLine size={48} style={{ marginBottom: '1rem', color: '#d1d5db' }} strokeWidth={1} />
-              <p style={{ margin: 0 }}>Search and select a product to begin recording movements.</p>
+              <p style={{ margin: 0 }}>{textData.movementTracker.emptyState}</p>
             </div>
           )}
         </div>
@@ -229,7 +230,7 @@ export default function MovementTracker({ prefillProduct }) {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div className="sd-form-group">
-                <label className="sd-label">Quantity</label>
+                <label className="sd-label">{textData.movementTracker.quantityLabel}</label>
                 <input
                   type="number"
                   name="quantityMoved"
@@ -242,7 +243,7 @@ export default function MovementTracker({ prefillProduct }) {
                 />
               </div>
               <div className="sd-form-group">
-                <label className="sd-label">Reason/Action</label>
+                <label className="sd-label">{textData.movementTracker.reasonLabel}</label>
                 <select
                   name="reason"
                   value={formData.reason}
@@ -257,16 +258,16 @@ export default function MovementTracker({ prefillProduct }) {
             <div style={{ padding: '1rem', backgroundColor: '#fafafb', borderRadius: '12px', border: '1px solid var(--sd-border-color)' }}>
               <p style={{ fontSize: '0.75rem', color: 'var(--sd-text-muted)', marginBottom: '1rem', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                 <Info size={16} style={{ flexShrink: 0 }} />
-                Based on the reason selected, stock will automatically increase (Restock, Return) or decrease (Damage, Sent Out).
+                {textData.movementTracker.infoText}
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="sd-form-group">
-                  <label className="sd-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>From Location</label>
-                  <input type="text" name="fromLocation" value={formData.fromLocation} onChange={handleChange} className="sd-input" placeholder="Optional" />
+                  <label className="sd-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{textData.movementTracker.fromLocation}</label>
+                  <input type="text" name="fromLocation" value={formData.fromLocation} onChange={handleChange} className="sd-input" placeholder={textData.movementTracker.optional} />
                 </div>
                 <div className="sd-form-group">
-                  <label className="sd-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>To Location</label>
-                  <input type="text" name="toLocation" value={formData.toLocation} onChange={handleChange} className="sd-input" placeholder="Optional" />
+                  <label className="sd-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{textData.movementTracker.toLocation}</label>
+                  <input type="text" name="toLocation" value={formData.toLocation} onChange={handleChange} className="sd-input" placeholder={textData.movementTracker.optional} />
                 </div>
               </div>
             </div>
@@ -277,7 +278,7 @@ export default function MovementTracker({ prefillProduct }) {
               className="sd-btn sd-btn-primary"
               style={{ width: '100%', marginTop: '1rem', padding: '0.875rem' }}
             >
-              {loading ? <Loader2 className="animate-spin" size={20} /> : 'Confirm Movement'}
+              {loading ? <Loader2 className="animate-spin" size={20} /> : textData.movementTracker.confirmButton}
             </button>
           </form>
         </div>

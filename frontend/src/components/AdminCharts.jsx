@@ -15,8 +15,8 @@ export default function AdminCharts() {
     const fetchChartData = async () => {
       try {
         const [productsRes, logsRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/products', { headers: { Authorization: `Bearer ${user.token}` } }),
-          axios.get('http://localhost:5000/api/logs/movement', { headers: { Authorization: `Bearer ${user.token}` } })
+          axios.get('http://localhost:5001/api/products', { headers: { Authorization: `Bearer ${user.token}` } }),
+          axios.get('http://localhost:5001/api/logs/movement', { headers: { Authorization: `Bearer ${user.token}` } })
         ]);
 
         const products = productsRes.data;

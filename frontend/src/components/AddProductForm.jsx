@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { PackagePlus, Loader2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import textData from '../constants/textData';
 
 export default function AddProductForm({ onSuccess }) {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: '', category: '', brand: '', supplier: '',
-    purchasePrice: '', sellingPrice: '', quantity: '',
+    purchasePrice: '', sellingPrice: '', quantity: '', unitType: 'pcs',
     description: '', storageLocation: '', productImage: ''
   });
 
@@ -21,31 +22,14 @@ export default function AddProductForm({ onSuccess }) {
     const fetchDropdownData = async () => {
       try {
         const [catRes, supRes] = await Promise.all([
-          axios.get('http://127.0.0.1:5000/api/categories', { headers: { Authorization: `Bearer ${user.token}` } }),
-          axios.get('http://127.0.0.1:5000/api/suppliers', { headers: { Authorization: `Bearer ${user.token}` } })
+          axios.get('http://localhost:5001/api/categories', { headers: { Authorization: `Bearer ${user.token}` } }),
+          axios.get('http://localhost:5001/api/suppliers', { headers: { Authorization: `Bearer ${user.token}` } })
         ]);
 
-        if (catRes.data && catRes.data.length > 0) {
-          setCategories(catRes.data);
-        } else {
-          setCategories([{ _id: 'temp_id', name: 'Please refresh or add categories' }]);
-        }
-
-        if (supRes.data && supRes.data.length > 0) {
-          setSuppliers(supRes.data);
-        } else {
-          setSuppliers([]);
-        }
-
-        if (supRes.data && supRes.data.length > 0) {
-          setSuppliers(supRes.data);
-        } else {
-          setSuppliers([{ _id: '60d21b4667d0d8992e610c87', name: 'TechCorp' }, { _id: '60d21b4667d0d8992e610c88', name: 'WoodWorks' }]);
-        }
+        if (catRes.data) setCategories(catRes.data);
+        if (supRes.data) setSuppliers(supRes.data);
       } catch (err) {
         console.error('Failed to fetch categories/suppliers', err);
-        setCategories([{ _id: '60d21b4667d0d8992e610c85', name: 'Electronics' }, { _id: '60d21b4667d0d8992e610c86', name: 'Furniture' }]);
-        setSuppliers([{ _id: '60d21b4667d0d8992e610c87', name: 'TechCorp' }, { _id: '60d21b4667d0d8992e610c88', name: 'WoodWorks' }]);
       }
     };
     if (user?.token) fetchDropdownData();
@@ -58,7 +42,7 @@ export default function AddProductForm({ onSuccess }) {
   const handleReset = () => {
     setFormData({
       name: '', category: '', brand: '', supplier: '',
-      purchasePrice: '', sellingPrice: '', quantity: '',
+      purchasePrice: '', sellingPrice: '', quantity: '', unitType: 'pcs',
       description: '', storageLocation: '', productImage: ''
     });
     setError('');
@@ -78,7 +62,7 @@ export default function AddProductForm({ onSuccess }) {
       payload.productId = `SKU-${Math.floor(Math.random() * 10000)}`;
       payload.minStockLevel = 50;
 
-      await axios.post('http://127.0.0.1:5000/api/products', payload, {
+      await axios.post('http://localhost:5001/api/products', payload, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
 
@@ -96,7 +80,7 @@ export default function AddProductForm({ onSuccess }) {
     <div className="sd-card">
       <div className="sd-card-header">
         <PackagePlus size={24} style={{ color: 'var(--sd-primary-color)' }} />
-        <h3 className="sd-card-title">Add New Product</h3>
+        <h3 className="sd-card-title">{textData.addProduct.title}</h3>
       </div>
 
       {error && (
@@ -108,7 +92,7 @@ export default function AddProductForm({ onSuccess }) {
       {success && (
         <div className="sd-alert-card" style={{ backgroundColor: 'var(--sd-status-approved-bg)', borderColor: 'var(--sd-status-approved-text)', color: 'var(--sd-status-approved-text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <CheckCircle2 size={20} />
-          <div className="sd-alert-content">Product successfully added! Status set to 'Pending Approval'.</div>
+          <div className="sd-alert-content">{textData.addProduct.success}</div>
         </div>
       )}
 
@@ -116,47 +100,63 @@ export default function AddProductForm({ onSuccess }) {
         <div className="sd-form-grid">
 
           <div className="sd-form-group">
-            <label className="sd-label">Product Name</label>
-            <input required type="text" name="name" value={formData.name} onChange={handleChange} className="sd-input" placeholder="e.g. Wireless Mouse" />
+            <label className="sd-label">{textData.addProduct.form.name}</label>
+            <input required type="text" name="name" value={formData.name} onChange={handleChange} className="sd-input" placeholder={textData.addProduct.placeholders.name} />
           </div>
 
           <div className="sd-form-group">
-            <label className="sd-label">Product Category</label>
+            <label className="sd-label">{textData.addProduct.form.category}</label>
             <select required name="category" value={formData.category} onChange={handleChange} className="sd-select">
-              <option value="">Select Category...</option>
+              <option value="">{textData.addProduct.placeholders.category}</option>
               {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
             </select>
           </div>
 
           <div className="sd-form-group">
-            <label className="sd-label">Brand Name</label>
-            <input required type="text" name="brand" value={formData.brand} onChange={handleChange} className="sd-input" placeholder="e.g. Logitech" />
+            <label className="sd-label">{textData.addProduct.form.brand}</label>
+            <input required type="text" name="brand" value={formData.brand} onChange={handleChange} className="sd-input" placeholder={textData.addProduct.placeholders.brand} />
           </div>
 
           <div className="sd-form-group">
-            <label className="sd-label">Supplier Name</label>
-            <input required type="text" name="supplier" value={formData.supplier} onChange={handleChange} className="sd-input" placeholder="e.g. Mr. Jay Patel" />
+            <label className="sd-label">{textData.addProduct.form.supplier}</label>
+            <select required name="supplier" value={formData.supplier} onChange={handleChange} className="sd-select">
+              <option value="">{textData.addProduct.placeholders.supplier}</option>
+              {suppliers.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
+            </select>
           </div>
 
           <div className="sd-form-group">
-            <label className="sd-label">Purchase Price ($)</label>
-            <input required type="number" step="0.01" name="purchasePrice" value={formData.purchasePrice} onChange={handleChange} className="sd-input" placeholder="0.00" />
+            <label className="sd-label">{textData.addProduct.form.purchasePrice}</label>
+            <input required type="number" step="0.01" name="purchasePrice" value={formData.purchasePrice} onChange={handleChange} className="sd-input" placeholder={textData.addProduct.placeholders.price} />
           </div>
 
           <div className="sd-form-group">
-            <label className="sd-label">Selling Price ($)</label>
-            <input required type="number" step="0.01" name="sellingPrice" value={formData.sellingPrice} onChange={handleChange} className="sd-input" placeholder="0.00" />
+            <label className="sd-label">{textData.addProduct.form.sellingPrice}</label>
+            <input required type="number" step="0.01" name="sellingPrice" value={formData.sellingPrice} onChange={handleChange} className="sd-input" placeholder={textData.addProduct.placeholders.price} />
           </div>
 
           <div className="sd-form-group">
-            <label className="sd-label">Product Quantity</label>
-            <input required type="number" name="quantity" value={formData.quantity} onChange={handleChange} className="sd-input" placeholder="e.g. 100" />
+            <label className="sd-label">{textData.addProduct.form.quantity}</label>
+            <input required type="number" name="quantity" value={formData.quantity} onChange={handleChange} className="sd-input" placeholder={textData.addProduct.placeholders.quantity} />
           </div>
 
           <div className="sd-form-group">
-            <label className="sd-label">Storage Location</label>
+            <label className="sd-label">{textData.addProduct.form.unitType}</label>
+            <select required name="unitType" value={formData.unitType} onChange={handleChange} className="sd-select">
+              <option value="pcs">Pieces (pcs)</option>
+              <option value="kg">Kilogram (kg)</option>
+              <option value="gm">Gram (gm)</option>
+              <option value="L">Liter (L)</option>
+              <option value="Meter">Meter</option>
+              <option value="Box">Box</option>
+              <option value="Packet">Packet</option>
+            </select>
+          </div>
+
+          <div className="sd-form-group">
+            <label className="sd-label">{textData.addProduct.form.location}</label>
             <select required name="storageLocation" value={formData.storageLocation} onChange={handleChange} className="sd-select">
-              <option value="">Select Location...</option>
+              <option value="">{textData.addProduct.placeholders.location}</option>
               <option value="Shop">Shop Floor</option>
               <option value="Rack">Rack</option>
               <option value="Warehouse Section">Warehouse Section</option>
@@ -164,12 +164,12 @@ export default function AddProductForm({ onSuccess }) {
           </div>
 
           <div className="sd-form-group full">
-            <label className="sd-label">Product Description <span style={{ color: 'var(--sd-text-muted)', fontSize: '0.85em', fontWeight: 'normal' }}>(Optional)</span></label>
-            <textarea name="description" value={formData.description} onChange={handleChange} className="sd-textarea" placeholder="Detailed product description..."></textarea>
+            <label className="sd-label">{textData.addProduct.form.description} <span style={{ color: 'var(--sd-text-muted)', fontSize: '0.85em', fontWeight: 'normal' }}>{textData.addProduct.form.optional}</span></label>
+            <textarea name="description" value={formData.description} onChange={handleChange} className="sd-textarea" placeholder={textData.addProduct.placeholders.description}></textarea>
           </div>
 
           <div className="sd-form-group full">
-            <label className="sd-label">Product Image <span style={{ color: 'var(--sd-text-muted)', fontSize: '0.85em', fontWeight: 'normal' }}>(Optional)</span></label>
+            <label className="sd-label">{textData.addProduct.form.image} <span style={{ color: 'var(--sd-text-muted)', fontSize: '0.85em', fontWeight: 'normal' }}>{textData.addProduct.form.optional}</span></label>
             <input type="file" name="productImage" className="sd-input" accept="image/*" />
           </div>
 
@@ -178,10 +178,10 @@ export default function AddProductForm({ onSuccess }) {
         <div className="sd-btn-group">
           <button type="submit" disabled={isSubmitting} className="sd-btn sd-btn-primary">
             {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : <PackagePlus size={20} />}
-            Add Product
+            {textData.addProduct.buttons.add}
           </button>
           <button type="button" onClick={handleReset} className="sd-btn sd-btn-secondary" disabled={isSubmitting}>
-            Reset Form
+            {textData.addProduct.buttons.reset}
           </button>
         </div>
       </form>

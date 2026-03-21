@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Loader2, CheckCircle2, UserCircle, Save, AlertCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, UserCircle, Save, AlertCircle, KeyRound } from 'lucide-react';
+import textData from '../constants/textData';
 
 export default function Profile() {
   const { user, updateUser } = useAuth();
-  
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -18,6 +21,9 @@ export default function Profile() {
     role: '',
     shopName: '',
     profilePhoto: '',
+    managerId: '',
+    department: '',
+    joiningDate: '',
     password: '' // Only for updates, not fetched
   });
 
@@ -29,10 +35,10 @@ export default function Profile() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await axios.get('http://127.0.0.1:5000/api/auth/profile', {
+        const res = await axios.get('http://localhost:5001/api/auth/profile', {
           headers: { Authorization: `Bearer ${user.token}` }
         });
-        
+
         const data = res.data;
         setFormData(prev => ({
           ...prev,
@@ -46,10 +52,13 @@ export default function Profile() {
           shiftTime: data.shiftTime || '',
           role: data.role || '',
           shopName: data.shopName || '',
-          profilePhoto: data.profilePhoto || ''
+          profilePhoto: data.profilePhoto || '',
+          managerId: data.managerId || '',
+          department: data.department || '',
+          joiningDate: data.joiningDate || ''
         }));
       } catch (err) {
-        setMessage({ type: 'error', text: 'Failed to load profile data.' });
+        setMessage({ type: 'error', text: textData.profile.errorLoad });
       } finally {
         setIsLoading(false);
       }
@@ -77,7 +86,8 @@ export default function Profile() {
         state: formData.state,
         pincode: formData.pincode,
         shiftTime: formData.shiftTime,
-        profilePhoto: formData.profilePhoto
+        profilePhoto: formData.profilePhoto,
+        department: formData.department
       };
 
       if (formData.password.trim() !== '') {
@@ -88,20 +98,20 @@ export default function Profile() {
         payload.password = formData.password;
       }
 
-      const res = await axios.put('http://127.0.0.1:5000/api/auth/profile', payload, {
+      const res = await axios.put('http://localhost:5001/api/auth/profile', payload, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
 
       // Update the AuthContext and localStorage with the new token and details
       updateUser(res.data);
 
-      setMessage({ type: 'success', text: 'Profile updated successfully!' });
-      
+      setMessage({ type: 'success', text: textData.profile.success });
+
       // Clear password field after successful update
       setFormData(prev => ({ ...prev, password: '' }));
-      
+
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data?.message || err.message || 'Failed to update profile.' });
+      setMessage({ type: 'error', text: err.response?.data?.message || err.message || textData.profile.errorUpdate });
     } finally {
       setIsSubmitting(false);
     }
@@ -119,9 +129,9 @@ export default function Profile() {
     <div className="sd-card">
       <div className="sd-card-header" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         {formData.profilePhoto ? (
-          <img 
-            src={formData.profilePhoto} 
-            alt="Profile" 
+          <img
+            src={formData.profilePhoto}
+            alt="Profile"
             style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--sd-border-color)' }}
           />
         ) : (
@@ -130,14 +140,14 @@ export default function Profile() {
           </div>
         )}
         <div>
-          <h3 className="sd-card-title">My Profile</h3>
-          <p style={{ color: 'var(--sd-text-muted)', fontSize: '0.85rem' }}>View and update your personal information.</p>
+          <h3 className="sd-card-title">{textData.profile.title}</h3>
+          <p style={{ color: 'var(--sd-text-muted)', fontSize: '0.85rem' }}>{textData.profile.subtitle}</p>
         </div>
       </div>
 
       {message && (
-        <div className="sd-alert-card mb-4" style={{ 
-          backgroundColor: message.type === 'success' ? 'var(--sd-status-approved-bg)' : 'var(--sd-status-rejected-bg)', 
+        <div className="sd-alert-card mb-4" style={{
+          backgroundColor: message.type === 'success' ? 'var(--sd-status-approved-bg)' : 'var(--sd-status-rejected-bg)',
           color: message.type === 'success' ? 'var(--sd-status-approved-text)' : 'var(--sd-status-rejected-text)',
           borderColor: message.type === 'success' ? 'var(--sd-status-approved-text)' : 'var(--sd-status-rejected-text)',
           display: 'flex', alignItems: 'center', gap: '8px'
@@ -150,87 +160,87 @@ export default function Profile() {
       <form onSubmit={handleSubmit} className="sd-form-grid">
         {/* Editable Fields */}
         <div className="sd-form-group">
-          <label className="sd-label">Full Name</label>
-          <input 
+          <label className="sd-label">{textData.profile.fullName}</label>
+          <input
             required
             name="fullName"
-            type="text" 
-            className="sd-input" 
+            type="text"
+            className="sd-input"
             value={formData.fullName}
             onChange={handleChange}
           />
         </div>
 
         <div className="sd-form-group">
-          <label className="sd-label">Phone Number</label>
-          <input 
+          <label className="sd-label">{textData.profile.phone}</label>
+          <input
             required
             name="mobileNumber"
-            type="text" 
-            className="sd-input" 
+            type="text"
+            className="sd-input"
             value={formData.mobileNumber}
             onChange={handleChange}
           />
         </div>
 
         <div className="sd-form-group full">
-          <label className="sd-label">Address</label>
-          <input 
+          <label className="sd-label">{textData.profile.address}</label>
+          <input
             required
             name="address"
-            type="text" 
-            className="sd-input" 
+            type="text"
+            className="sd-input"
             value={formData.address}
             onChange={handleChange}
           />
         </div>
 
         <div className="sd-form-group">
-          <label className="sd-label">City</label>
-          <input 
+          <label className="sd-label">{textData.profile.city}</label>
+          <input
             required
             name="city"
-            type="text" 
-            className="sd-input" 
+            type="text"
+            className="sd-input"
             value={formData.city}
             onChange={handleChange}
           />
         </div>
 
         <div className="sd-form-group">
-          <label className="sd-label">State</label>
-          <input 
+          <label className="sd-label">{textData.profile.state}</label>
+          <input
             required
             name="state"
-            type="text" 
-            className="sd-input" 
+            type="text"
+            className="sd-input"
             value={formData.state}
             onChange={handleChange}
           />
         </div>
 
         <div className="sd-form-group">
-          <label className="sd-label">Pincode</label>
-          <input 
+          <label className="sd-label">{textData.profile.pincode}</label>
+          <input
             required
             name="pincode"
-            type="text" 
-            className="sd-input" 
+            type="text"
+            className="sd-input"
             value={formData.pincode}
             onChange={handleChange}
           />
         </div>
 
         <div className="sd-form-group">
-          <label className="sd-label">Shift Time</label>
-          <select 
+          <label className="sd-label">{textData.profile.shiftTime}</label>
+          <select
             name="shiftTime"
-            className="sd-select" 
+            className="sd-select"
             value={formData.shiftTime}
             onChange={handleChange}
             disabled={formData.role !== 'Staff'}
           >
-            <option value="">-- No Shift Assigned --</option>
+            <option value="">{textData.profile.noShift}</option>
             <option value="Morning">Morning</option>
             <option value="Evening">Evening</option>
             <option value="Night">Night</option>
@@ -238,39 +248,68 @@ export default function Profile() {
         </div>
 
         <div className="sd-form-group full">
-          <label className="sd-label">Profile Photo URL (Optional)</label>
-          <input 
+          <label className="sd-label">{textData.profile.profilePhoto}</label>
+          <input
             name="profilePhoto"
-            type="url" 
-            className="sd-input" 
+            type="url"
+            className="sd-input"
             value={formData.profilePhoto}
             onChange={handleChange}
             placeholder="https://..."
           />
         </div>
 
-        <div className="sd-form-group">
-          <label className="sd-label">Change Password</label>
+        {/* <div className="sd-form-group">
+          <label className="sd-label">{textData.profile.changePassword}</label>
           <input 
             name="password"
             type="password" 
             className="sd-input" 
             value={formData.password}
             onChange={handleChange}
-            placeholder="Leave blank to keep current"
+            placeholder={textData.profile.passwordPlaceholder}
           />
-        </div>
+        </div> */}
 
         {/* Read-Only Information Section */}
+        {formData.role === 'Manager' && (
+          <div className="sd-form-group full" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--sd-border-color)' }}>
+            <h4 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '1rem', color: 'var(--sd-text-color)' }}>{textData.profile.managerDetails}</h4>
+            <div className="sd-form-grid">
+              <div className="sd-form-group">
+                <label className="sd-label">{textData.profile.managerId}</label>
+                <input type="text" className="sd-input" value={formData.managerId} disabled style={{ backgroundColor: '#f9fafb', cursor: 'not-allowed' }} />
+              </div>
+              <div className="sd-form-group">
+                <label className="sd-label">{textData.profile.department}</label>
+                <select 
+                  name="department" 
+                  className="sd-select" 
+                  value={formData.department} 
+                  onChange={handleChange}
+                >
+                  <option value="">Select Department</option>
+                  <option value="Inventory Management">Inventory Management</option>
+                  <option value="Product Management">Product Management</option>
+                </select>
+              </div>
+              <div className="sd-form-group">
+                <label className="sd-label">{textData.profile.joiningDate}</label>
+                <input type="text" className="sd-input" value={formData.joiningDate ? new Date(formData.joiningDate).toLocaleDateString() : ''} disabled style={{ backgroundColor: '#f9fafb', cursor: 'not-allowed' }} />
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="sd-form-group full" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--sd-border-color)' }}>
-          <h4 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '1rem', color: 'var(--sd-text-color)' }}>Account Details (Read-Only)</h4>
+          <h4 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '1rem', color: 'var(--sd-text-color)' }}>{textData.profile.accountDetails}</h4>
         </div>
 
         <div className="sd-form-group">
-          <label className="sd-label">Email Address</label>
-          <input 
-            type="email" 
-            className="sd-input" 
+          <label className="sd-label">{textData.profile.email}</label>
+          <input
+            type="email"
+            className="sd-input"
             value={formData.email}
             disabled
             style={{ backgroundColor: '#f9fafb', cursor: 'not-allowed' }}
@@ -278,31 +317,47 @@ export default function Profile() {
         </div>
 
         <div className="sd-form-group">
-          <label className="sd-label">Role</label>
-          <input 
-            type="text" 
-            className="sd-input" 
+          <label className="sd-label">{textData.profile.role}</label>
+          <input
+            type="text"
+            className="sd-input"
             value={formData.role}
             disabled
             style={{ backgroundColor: '#f9fafb', cursor: 'not-allowed' }}
           />
         </div>
-        
+
         <div className="sd-form-group">
-          <label className="sd-label">Assigned Shop</label>
-          <input 
-            type="text" 
-            className="sd-input" 
+          <label className="sd-label">{textData.profile.shop}</label>
+          <input
+            type="text"
+            className="sd-input"
             value={formData.shopName}
             disabled
             style={{ backgroundColor: '#f9fafb', cursor: 'not-allowed' }}
           />
         </div>
 
-        <div className="sd-btn-group full" style={{ gridColumn: '1 / -1', marginTop: '1rem', display: 'flex', justifyContent: 'flex-start' }}>
+        <div className="sd-btn-group full" style={{ gridColumn: '1 / -1', marginTop: '1rem', display: 'flex', justifyContent: 'flex-start', gap: '1rem' }}>
           <button type="submit" disabled={isSubmitting} className="sd-btn sd-btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-            {isSubmitting ? 'Updating...' : 'Update Profile'}
+            {isSubmitting ? textData.profile.updating : textData.profile.updateButton}
+          </button>
+          
+          <button 
+            type="button" 
+            onClick={() => navigate('/change-password')}
+            className="sd-btn" 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem',
+              backgroundColor: '#2563eb',
+              color: 'white'
+            }}
+          >
+            <KeyRound size={18} />
+            {textData.profile.changePasswordButton}
           </button>
         </div>
       </form>

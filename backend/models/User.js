@@ -29,6 +29,9 @@ const userSchema = new mongoose.Schema({
   staffId: { type: String, unique: true, sparse: true },
   shiftTime: { type: String, enum: ['Morning', 'Evening', 'Night'] },
 
+  resetPasswordToken: String,
+  resetPasswordExpire: Date,
+
   joiningDate: { type: Date, default: Date.now }
 }, { timestamps: true });
 

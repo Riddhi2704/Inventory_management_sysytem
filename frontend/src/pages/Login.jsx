@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Loader2, AlertCircle, Eye, EyeOff, LayoutDashboard } from 'lucide-react';
+import textData from '../constants/textData';
 import './Login.css';
 
 export default function Login() {
@@ -27,7 +28,7 @@ export default function Login() {
       else navigate('/');
 
     } catch (err) {
-      setError(err.message || 'Failed to sign in. Please check your credentials.');
+      setError(err || 'Failed to sign in. Please check your credentials.');
     } finally {
       setIsSubmitting(false);
     }
@@ -42,8 +43,8 @@ export default function Login() {
           <div className="login-icon">
             <LayoutDashboard size={32} strokeWidth={2} />
           </div>
-          <h2 className="login-title">Inventory Management System Login</h2>
-          <p className="login-subtitle">Sign in to access your dashboard</p>
+          <h2 className="login-title">{textData.login.title}</h2>
+          <p className="login-subtitle">{textData.login.subtitle}</p>
         </div>
 
         {/* Form */}
@@ -51,7 +52,7 @@ export default function Login() {
 
           {/* Email Field */}
           <div className="form-group">
-            <label>Email Address</label>
+            <label>{textData.login.emailLabel}</label>
             <div className="input-wrapper">
               <span className="input-icon">
                 <Mail size={18} />
@@ -61,14 +62,14 @@ export default function Login() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@example.com"
+                placeholder={textData.login.emailPlaceholder}
               />
             </div>
           </div>
 
           {/* Password Field */}
           <div className="form-group">
-            <label>Password</label>
+            <label>{textData.login.passwordLabel}</label>
             <div className="input-wrapper">
               <span className="input-icon">
                 <Lock size={18} />
@@ -78,7 +79,7 @@ export default function Login() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder={textData.login.passwordPlaceholder}
               />
               <button
                 type="button"
@@ -89,7 +90,7 @@ export default function Login() {
               </button>
             </div>
             <div className="forgot-password" style={{ marginTop: '0.5rem', textAlign: 'right' }}>
-              <Link to="/reset-password" style={{ color: 'var(--primary-color)', fontSize: '0.875rem', textDecoration: 'none', fontWeight: '500' }}>Forgot Password?</Link>
+              <Link to="/forgot-password" style={{ color: 'var(--primary-color)', fontSize: '0.875rem', textDecoration: 'none', fontWeight: '500' }}>{textData.login.forgotPassword}</Link>
             </div>
           </div>
 
@@ -108,15 +109,15 @@ export default function Login() {
             {isSubmitting ? (
               <Loader2 size={18} className="animate-spin" />
             ) : (
-              'Login'
+              textData.login.loginButton
             )}
           </button>
         </form>
 
         {/* Footer */}
         <div className="login-footer">
-          Don't have an account?{' '}
-          <Link to="/register">Register</Link>
+          {textData.login.noAccount}{' '}
+          <Link to="/register">{textData.login.registerLink}</Link>
         </div>
       </div>
     </div>

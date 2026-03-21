@@ -18,6 +18,7 @@ import ProductList from '../components/ProductList';
 import MovementTracker from '../components/MovementTracker';
 import BarcodeScannerWidget from '../components/BarcodeScannerWidget';
 import Profile from '../components/Profile';
+import textData from '../constants/textData';
 import './StaffDashboard.css';
 
 import axios from 'axios';
@@ -39,7 +40,7 @@ const UpdateQuantity = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await axios.get('http://127.0.0.1:5000/api/categories', {
+        const res = await axios.get('http://localhost:5001/api/categories', {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         setCategories(res.data);
@@ -59,7 +60,7 @@ const UpdateQuantity = () => {
         return;
       }
       try {
-        const res = await axios.get(`http://localhost:5000/api/products?category=${selectedCategory}`, {
+        const res = await axios.get(`http://localhost:5001/api/products?category=${selectedCategory}`, {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         setProducts(res.data);
@@ -79,7 +80,7 @@ const UpdateQuantity = () => {
     setMessage(null);
 
     try {
-      await axios.put(`http://localhost:5000/api/products/${selectedProduct}/quantity`, 
+      await axios.put(`http://localhost:5001/api/products/${selectedProduct}/quantity`, 
         { quantityAdded: parseInt(quantityStr, 10) },
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
@@ -97,7 +98,7 @@ const UpdateQuantity = () => {
   return (
     <div className="sd-card">
       <div className="sd-card-header">
-        <h3 className="sd-card-title">Update Product Quantity</h3>
+        <h3 className="sd-card-title">{textData.staffDashboard.updateQuantity.title}</h3>
       </div>
       
       {message && (
@@ -114,14 +115,14 @@ const UpdateQuantity = () => {
 
       <form onSubmit={handleSubmit} className="sd-form-grid">
         <div className="sd-form-group full">
-          <label className="sd-label">Select Category</label>
+          <label className="sd-label">{textData.staffDashboard.updateQuantity.selectCategory}</label>
           <select 
             required 
             className="sd-select" 
             value={selectedCategory} 
             onChange={(e) => setSelectedCategory(e.target.value)}
           >
-            <option value="">-- Choose Category --</option>
+            <option value="">{textData.staffDashboard.updateQuantity.chooseCategory}</option>
             {categories.map((c) => (
               <option key={c._id} value={c._id}>{c.name}</option>
             ))}
@@ -148,7 +149,7 @@ const UpdateQuantity = () => {
         </div>
 
         <div className="sd-form-group">
-          <label className="sd-label">Quantity (+ added / - removed)</label>
+          <label className="sd-label">{textData.staffDashboard.updateQuantity.quantityLabel}</label>
           <input 
             required 
             type="number" 
@@ -166,7 +167,7 @@ const UpdateQuantity = () => {
 
         <div className="sd-btn-group full" style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
           <button type="submit" disabled={isSubmitting || !selectedProduct || !quantityStr} className="sd-btn sd-btn-primary">
-            {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : 'Update Quantity'}
+            {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : textData.staffDashboard.updateQuantity.button}
           </button>
         </div>
       </form>
@@ -183,7 +184,7 @@ const LowStockAlerts = () => {
   useEffect(() => {
     const fetchLowStock = async () => {
       try {
-        const res = await axios.get('http://127.0.0.1:5000/api/products?lowStock=true', {
+        const res = await axios.get('http://localhost:5001/api/products?lowStock=true', {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         setAlerts(res.data);
@@ -200,12 +201,12 @@ const LowStockAlerts = () => {
   return (
     <div className="sd-card">
       <div className="sd-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 className="sd-card-title">Low Stock Notifications</h3>
+        <h3 className="sd-card-title">{textData.staffDashboard.lowStock.title}</h3>
         <span style={{ backgroundColor: 'var(--sd-status-rejected-bg)', color: 'var(--sd-status-rejected-text)', padding: '4px 8px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 'bold' }}>
           {alerts.length} Alerts
         </span>
       </div>
-      <p style={{ color: 'var(--sd-text-muted)', marginBottom: '1.5rem' }}>Inform staff to notify manager and prevent stock shortage.</p>
+      <p style={{ color: 'var(--sd-text-muted)', marginBottom: '1.5rem' }}>{textData.staffDashboard.lowStock.desc}</p>
 
       {loading ? (
         <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--sd-text-muted)' }}><Loader2 className="animate-spin inline mr-2" /> Loading alerts...</div>
@@ -213,7 +214,7 @@ const LowStockAlerts = () => {
         <div style={{ padding: '1.5rem', textAlign: 'center', color: '#ef4444' }}>{error}</div>
       ) : alerts.length === 0 ? (
         <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--sd-text-muted)', backgroundColor: 'var(--sd-bg-body)', borderRadius: '8px' }}>
-          ✅ All products are above minimum stock levels.
+          {textData.staffDashboard.lowStock.allStocked}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -227,10 +228,10 @@ const LowStockAlerts = () => {
                   <h4 className="sd-alert-title">{product.name}</h4>
                   <span style={{ fontSize: '0.75rem', color: 'var(--sd-text-muted)' }}>SKU: {product.productId}</span>
                 </div>
-                <p className="sd-alert-text">Minimum Stock Level: {product.minStockLevel || 50} | Current Stock: <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{product.quantity}</span></p>
+                <p className="sd-alert-text">Minimum Stock Level: {product.minStockLevel || 50} | Current Stock: <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{product.quantity} {product.unitType || 'pcs'}</span></p>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
-                  <p className="sd-alert-text" style={{ fontWeight: '600' }}>Status: Low Stock Warning</p>
-                  {product.supplier && <span style={{ fontSize: '0.75rem', color: 'var(--sd-primary-color)' }}>Supplier: {product.supplier?.name || 'Unknown'}</span>}
+                  <p className="sd-alert-text" style={{ fontWeight: '600' }}>{textData.staffDashboard.lowStock.statusLabel}</p>
+                  {product.supplier && <span style={{ fontSize: '0.75rem', color: 'var(--sd-primary-color)' }}>{textData.staffDashboard.lowStock.supplierLabel}: {product.supplier?.name || 'Unknown'}</span>}
                 </div>
               </div>
             </div>
@@ -246,9 +247,9 @@ const LowStockAlerts = () => {
 const DashboardOverview = () => (
   <div className="sd-card">
     <div className="sd-card-header">
-      <h3 className="sd-card-title">Product Status Workflow</h3>
+      <h3 className="sd-card-title">{textData.staffDashboard.workflow.title}</h3>
     </div>
-    <p style={{ color: 'var(--sd-text-muted)', marginBottom: '2rem' }}>Understand the lifecycle of new products added to the inventory.</p>
+    <p style={{ color: 'var(--sd-text-muted)', marginBottom: '2rem' }}>{textData.staffDashboard.workflow.subtitle}</p>
 
     <div className="sd-workflow">
       <div className="sd-workflow-step">
@@ -295,14 +296,14 @@ export default function StaffDashboard() {
   }, [activeView]);
 
   const navItems = [
-    { id: 'profile', label: 'Profile', icon: UserCircle },
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'add', label: 'Add Product', icon: PackagePlus },
-    { id: 'list', label: 'Product List', icon: List },
-    { id: 'update', label: 'Update Quantity', icon: ArrowUpDown },
-    { id: 'move', label: 'Product Movement', icon: ScanLine },
-    { id: 'lowstock', label: 'Low Stock Alerts', icon: AlertTriangle },
-    { id: 'scanner', label: 'Barcode Scanner', icon: ScanBarcode },
+    { id: 'profile', label: textData.staffDashboard.tabs.profile, icon: UserCircle },
+    { id: 'dashboard', label: textData.staffDashboard.tabs.dashboard, icon: LayoutDashboard },
+    { id: 'add', label: textData.staffDashboard.tabs.addProduct, icon: PackagePlus },
+    { id: 'list', label: textData.staffDashboard.tabs.productList, icon: List },
+    { id: 'update', label: textData.staffDashboard.tabs.updateQuantity, icon: ArrowUpDown },
+    { id: 'move', label: textData.staffDashboard.tabs.productMovement, icon: ScanLine },
+    { id: 'lowstock', label: textData.staffDashboard.tabs.lowStockAlerts, icon: AlertTriangle },
+    { id: 'scanner', label: textData.staffDashboard.tabs.barcodeScanner, icon: ScanBarcode },
   ];
 
   return (
@@ -331,7 +332,7 @@ export default function StaffDashboard() {
         <div className="sd-sidebar-footer">
           <button className="sd-nav-item" onClick={handleLogout} style={{ color: '#ef4444' }}>
             <LogOut />
-            Logout
+            {textData.common.logout}
           </button>
         </div>
       </div>
@@ -354,7 +355,7 @@ export default function StaffDashboard() {
               {navItems.find(i => i.id === activeView)?.label || 'Dashboard'}
             </h1>
             <p className="sd-page-subtitle">
-              Manage your inventory tracking and product registration.
+              {textData.staffDashboard.subtitle}
             </p>
           </div>
 

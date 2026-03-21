@@ -14,8 +14,8 @@ const getAdminDashboardStats = async (req, res) => {
     const lowStockProducts = await Product.find({ $expr: { $lte: ['$quantity', '$minStockLevel'] } }).countDocuments();
     const outOfStockProducts = await Product.find({ quantity: 0 }).countDocuments();
     
-    // Total Inventory Value
-    const products = await Product.find();
+    // Total Inventory Value (Only Active)
+    const products = await Product.find({ status: 'Active' });
     let totalInventoryValue = 0;
     products.forEach(p => {
       totalInventoryValue += (p.sellingPrice * p.quantity);

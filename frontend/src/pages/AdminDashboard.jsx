@@ -7,6 +7,7 @@ import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import AdminAuditLogs from '../components/AdminAuditLogs';
 import AdminAlerts from '../components/AdminAlerts';
 import AdminCharts from '../components/AdminCharts';
+import textData from '../constants/textData';
 
 const MOCK_TRENDS = [
   [ {v:10}, {v:15}, {v:12}, {v:25}, {v:18}, {v:30}, {v:28} ], // Green trend
@@ -24,7 +25,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/admin/dashboard', {
+        const res = await axios.get('http://localhost:5001/api/admin/dashboard', {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         setStats(res.data);
@@ -79,7 +80,7 @@ export default function AdminDashboard() {
          </div>
       </div>
       <div className="mt-4 flex items-center gap-2 text-xs font-medium text-slate-400">
-         <span>Weekly</span> 
+         <span>{textData.common.weekly}</span> 
          <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M1 1L5 5L9 1" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
          </svg>
@@ -96,7 +97,7 @@ export default function AdminDashboard() {
         {/* Brand Logo */}
         <div className="h-20 px-6 flex items-center mb-2 flex-shrink-0">
           <span className="text-2xl font-black tracking-tight flex items-center gap-2 text-slate-900">
-            ecomus
+            {textData.adminDashboard.sidebarTitle}
           </span>
           <button className="ml-auto text-slate-400 hover:text-slate-600">
              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
@@ -112,7 +113,7 @@ export default function AdminDashboard() {
                <button onClick={() => setActiveTab('overview')} className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl font-semibold text-orange-500 bg-orange-50/50 transition-all">
                  <span className="flex items-center gap-3">
                    <LayoutDashboard size={18} />
-                   <span>Dashboard</span>
+                   <span>{textData.adminDashboard.tabs.dashboard}</span>
                  </span>
                </button>
              </div>
@@ -121,7 +122,7 @@ export default function AdminDashboard() {
              <button onClick={() => setActiveTab('inventory')} className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl font-medium text-slate-600 hover:text-slate-900 transition-all group">
                <span className="flex items-center gap-3">
                  <Package size={18} />
-                 <span>Products</span>
+                 <span>{textData.adminDashboard.tabs.products}</span>
                </span>
                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 group-hover:text-slate-600 transition-colors"><path d="m9 18 6-6-6-6"/></svg>
              </button>
@@ -129,7 +130,7 @@ export default function AdminDashboard() {
              <button className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl font-medium text-slate-600 hover:text-slate-900 transition-all group">
                <span className="flex items-center gap-3">
                  <Layers size={18} />
-                 <span>Category</span>
+                 <span>{textData.adminDashboard.tabs.category}</span>
                </span>
                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 group-hover:text-slate-600 transition-colors"><path d="m9 18 6-6-6-6"/></svg>
              </button>
@@ -137,7 +138,7 @@ export default function AdminDashboard() {
              <button className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl font-medium text-slate-600 hover:text-slate-900 transition-all group">
                <span className="flex items-center gap-3">
                  <Tag size={18} />
-                 <span>Attributes</span>
+                 <span>{textData.adminDashboard.tabs.attributes}</span>
                </span>
                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 group-hover:text-slate-600 transition-colors"><path d="m9 18 6-6-6-6"/></svg>
              </button>
@@ -145,7 +146,7 @@ export default function AdminDashboard() {
              <button className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl font-medium text-slate-600 hover:text-slate-900 transition-all group">
                <span className="flex items-center gap-3">
                  <FileText size={18} />
-                 <span>Orders</span>
+                 <span>{textData.adminDashboard.tabs.orders}</span>
                </span>
                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 group-hover:text-slate-600 transition-colors"><path d="m9 18 6-6-6-6"/></svg>
              </button>
@@ -153,7 +154,7 @@ export default function AdminDashboard() {
              <button onClick={() => setActiveTab('users')} className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl font-medium text-slate-600 hover:text-slate-900 transition-all group">
                <span className="flex items-center gap-3">
                  <Users size={18} />
-                 <span>Users</span>
+                 <span>{textData.adminDashboard.tabs.users}</span>
                </span>
                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 group-hover:text-slate-600 transition-colors"><path d="m9 18 6-6-6-6"/></svg>
              </button>
@@ -161,7 +162,7 @@ export default function AdminDashboard() {
              <button className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl font-medium text-slate-600 hover:text-slate-900 transition-all group">
                <span className="flex items-center gap-3">
                  <Globe size={18} />
-                 <span>Online Store</span>
+                 <span>{textData.adminDashboard.tabs.onlineStore}</span>
                </span>
                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 group-hover:text-slate-600 transition-colors"><path d="m9 18 6-6-6-6"/></svg>
              </button>
@@ -169,28 +170,28 @@ export default function AdminDashboard() {
              <button onClick={() => setActiveTab('logs')} className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl font-medium text-slate-600 hover:text-slate-900 transition-all group">
                <span className="flex items-center gap-3">
                  <History size={18} />
-                 <span>Reports</span>
+                 <span>{textData.adminDashboard.tabs.reports}</span>
                </span>
              </button>
 
              <button className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl font-medium text-slate-600 hover:text-slate-900 transition-all group">
                <span className="flex items-center gap-3">
                  <Settings size={18} />
-                 <span>Settings</span>
+                 <span>{textData.adminDashboard.tabs.settings}</span>
                </span>
              </button>
              
              <button className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl font-medium text-slate-600 hover:text-slate-900 transition-all group">
                <span className="flex items-center gap-3">
                  <HelpCircle size={18} />
-                 <span>FAQ</span>
+                 <span>{textData.adminDashboard.tabs.faq}</span>
                </span>
              </button>
 
              <button onClick={handleLogout} className="w-full flex items-center justify-between px-4 py-2.5 mt-2 rounded-xl font-medium text-slate-600 hover:text-slate-900 transition-all group">
                <span className="flex items-center gap-3">
                  <LogOut size={18} />
-                 <span>Logout</span>
+                 <span>{textData.common.logout}</span>
                </span>
              </button>
              
@@ -208,7 +209,7 @@ export default function AdminDashboard() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
             <input 
               type="text" 
-              placeholder="Search here..." 
+              placeholder={textData.adminDashboard.searchPlaceholder} 
               className="w-full bg-white border border-slate-200 rounded-full py-2.5 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-slate-200 text-sm shadow-sm"
             />
           </div>
@@ -225,8 +226,8 @@ export default function AdminDashboard() {
                  {user?.fullName?.charAt(0) || 'A'}
               </div>
               <div className="hidden sm:block">
-                <p className="text-sm font-bold text-slate-800 leading-tight">{user?.fullName || 'Admin User'}</p>
-                <p className="text-xs text-slate-500 font-medium">System Administrator</p>
+                <p className="text-sm font-bold text-slate-800 leading-tight">{user?.fullName || textData.adminDashboard.adminUser}</p>
+                <p className="text-xs text-slate-500 font-medium">{textData.adminDashboard.systemAdmin}</p>
               </div>
             </div>
           </div>
@@ -240,8 +241,8 @@ export default function AdminDashboard() {
               {/* Top Row Cards matching Ecomus layout and colors */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard 
-                   title="Total Earnings" 
-                   value={stats ? `$${stats.totalInventoryValue.toLocaleString()}` : null} 
+                   title={textData.adminDashboard.statCards.earnings} 
+                   value={stats ? `₹${stats.totalInventoryValue.toLocaleString()}` : null} 
                    icon={TrendingUp} 
                    mainColor="#22C55E" // Green
                    bgColor="#DCFCE7"
@@ -249,7 +250,7 @@ export default function AdminDashboard() {
                    trendData={MOCK_TRENDS[0]}
                 />
                 <StatCard 
-                   title="Total Orders" 
+                   title={textData.adminDashboard.statCards.orders} 
                    value={stats?.totalProducts} 
                    icon={Package} 
                    mainColor="#F97316" // Orange
@@ -259,7 +260,7 @@ export default function AdminDashboard() {
                    onClick={() => setActiveTab('inventory')} 
                 />
                 <StatCard 
-                   title="Customers" 
+                   title={textData.adminDashboard.statCards.customers} 
                    value={stats?.totalCategories} 
                    icon={Users} 
                    mainColor="#8B5CF6" // Purple
@@ -268,7 +269,7 @@ export default function AdminDashboard() {
                    trendData={MOCK_TRENDS[2]}
                 />
                 <StatCard 
-                   title="My Balance" 
+                   title={textData.adminDashboard.statCards.balance} 
                    value={stats?.outOfStockProducts} 
                    icon={AlertTriangle} 
                    mainColor="#3B82F6" // Blue
@@ -288,8 +289,8 @@ export default function AdminDashboard() {
                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-up" style={{ animationDelay: '0.2s' }}>
                 <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100/60 flex flex-col h-[400px]">
                   <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-lg font-bold text-slate-800 truncate">Recent Logistics Audit</h3>
-                    <button onClick={() => setActiveTab('logs')} className="text-xs font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200/60 hover:bg-slate-100 transition-colors flex items-center gap-1">Weekly <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L5 5L9 1" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
+                    <h3 className="text-lg font-bold text-slate-800 truncate">{textData.adminDashboard.recentAudit}</h3>
+                    <button onClick={() => setActiveTab('logs')} className="text-xs font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200/60 hover:bg-slate-100 transition-colors flex items-center gap-1">{textData.common.weekly} <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L5 5L9 1" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
                   </div>
                   <div className="flex-1 overflow-hidden relative">
                     <div className="absolute inset-0 pb-16 pointer-events-none z-10 bg-gradient-to-t from-white via-transparent to-transparent fade-out"></div>
@@ -299,8 +300,8 @@ export default function AdminDashboard() {
                 
                 <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100/60 flex flex-col h-[400px]">
                   <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-lg font-bold text-slate-800">Critical Alerts Preview</h3>
-                    <button onClick={() => setActiveTab('alerts')} className="text-xs font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200/60 hover:bg-slate-100 transition-colors flex items-center gap-1">Weekly <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L5 5L9 1" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
+                    <h3 className="text-lg font-bold text-slate-800">{textData.adminDashboard.criticalAlerts}</h3>
+                    <button onClick={() => setActiveTab('alerts')} className="text-xs font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200/60 hover:bg-slate-100 transition-colors flex items-center gap-1">{textData.common.weekly} <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L5 5L9 1" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
                   </div>
                   <div className="flex-1 overflow-hidden relative border border-slate-100 rounded-xl bg-[#F8F9FA]/50"> {/* Very subtle background for internal lists */}
                     <div className="absolute inset-0 pb-16 pointer-events-none z-10 bg-gradient-to-t from-[#F8F9FA]/50 relative via-transparent to-transparent fade-out"></div>
@@ -326,8 +327,8 @@ export default function AdminDashboard() {
 
           {(activeTab !== 'overview' && activeTab !== 'logs' && activeTab !== 'alerts') && (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center text-slate-500 h-full flex flex-col justify-center animate-fade-in">
-              <h3 className="text-2xl font-bold text-slate-800 mb-2">Coming in Phase 3</h3>
-              <p>Advanced management modules for this section are being built.</p>
+              <h3 className="text-2xl font-bold text-slate-800 mb-2">{textData.adminDashboard.phase3Note}</h3>
+              <p>{textData.adminDashboard.phase3Desc}</p>
             </div>
           )}
         </div>

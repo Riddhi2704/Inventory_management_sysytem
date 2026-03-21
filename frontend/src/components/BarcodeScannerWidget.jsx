@@ -3,6 +3,7 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { ScanBarcode, Loader2, CheckCircle2, XCircle, ArrowRightCircle } from 'lucide-react';
+import textData from '../constants/textData';
 
 const BarcodeScannerWidget = ({ onActionRedirect }) => {
   const { user } = useAuth();
@@ -54,7 +55,7 @@ const BarcodeScannerWidget = ({ onActionRedirect }) => {
     try {
       // Search by exact productId/SKU or name (our backend allows both)
       // We assume barcode is the productId (SKU)
-      const res = await axios.get(`http://127.0.0.1:5000/api/products?search=${barcode}`, {
+      const res = await axios.get(`http://localhost:5001/api/products?search=${barcode}`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
 
@@ -63,7 +64,7 @@ const BarcodeScannerWidget = ({ onActionRedirect }) => {
         const exactMatch = res.data.find(p => p.productId === barcode) || res.data[0];
         setProductData(exactMatch);
       } else {
-        setError(`No product found in inventory with barcode: ${barcode}`);
+        setError(`${textData.barcodeScanner.noProduct} ${barcode}`);
       }
     } catch (err) {
       console.error('Failed to fetch product by barcode', err);
@@ -96,10 +97,10 @@ const BarcodeScannerWidget = ({ onActionRedirect }) => {
     <div className="sd-card">
       <div className="sd-card-header">
         <ScanBarcode size={24} style={{ color: 'var(--sd-primary-color)' }} />
-        <h3 className="sd-card-title">Live Barcode Scanner</h3>
+        <h3 className="sd-card-title">{textData.barcodeScanner.title}</h3>
       </div>
       <p style={{ color: 'var(--sd-text-muted)', marginBottom: '1.5rem' }}>
-        Use your device camera to scan a product barcode (SKU) and view live inventory details.
+        {textData.barcodeScanner.subtitle}
       </p>
 
       {/* The HTML5 QR Code Scanner container */}
@@ -107,18 +108,18 @@ const BarcodeScannerWidget = ({ onActionRedirect }) => {
         <div id="reader" width="100%"></div>
         
         <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--sd-border-color)', paddingTop: '1.5rem' }}>
-          <p style={{ textAlign: 'center', marginBottom: '1rem', fontWeight: '500' }}>OR ENTER MANUALLY</p>
+          <p style={{ textAlign: 'center', marginBottom: '1rem', fontWeight: '500' }}>{textData.barcodeScanner.manualEntry}</p>
           <form onSubmit={handleManualSubmit} style={{ display: 'flex', gap: '0.5rem', maxWidth: '400px', margin: '0 auto' }}>
             <input 
               type="text" 
               className="sd-input" 
-              placeholder="Enter Barcode / SKU" 
+              placeholder={textData.barcodeScanner.manualPlaceholder}
               value={manualBarcode}
               onChange={(e) => setManualBarcode(e.target.value)}
               style={{ flex: 1 }}
             />
             <button type="submit" className="sd-btn sd-btn-primary" disabled={loading || !manualBarcode.trim()}>
-              Search
+              {textData.barcodeScanner.searchButton}
             </button>
           </form>
         </div>
@@ -126,7 +127,7 @@ const BarcodeScannerWidget = ({ onActionRedirect }) => {
 
       {loading && (
         <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--sd-text-muted)' }}>
-          <Loader2 className="animate-spin inline mr-2" /> Searching inventory...
+          <Loader2 className="animate-spin inline mr-2" /> {textData.barcodeScanner.searching}
         </div>
       )}
 
@@ -136,7 +137,7 @@ const BarcodeScannerWidget = ({ onActionRedirect }) => {
             <XCircle size={24} />
           </div>
           <div className="sd-alert-content">
-            <h4 className="sd-alert-title" style={{ color: 'var(--sd-status-rejected-text)' }}>Scan Failed</h4>
+            <h4 className="sd-alert-title" style={{ color: 'var(--sd-status-rejected-text)' }}>{textData.barcodeScanner.scanFailed}</h4>
             <p className="sd-alert-text">{error}</p>
           </div>
         </div>
@@ -156,29 +157,29 @@ const BarcodeScannerWidget = ({ onActionRedirect }) => {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
             <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--sd-text-muted)' }}>SKU / Barcode</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--sd-text-muted)' }}>{textData.barcodeScanner.table.sku}</div>
               <div style={{ fontWeight: '600' }}>{productData.productId}</div>
             </div>
             <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--sd-text-muted)' }}>Category</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--sd-text-muted)' }}>{textData.barcodeScanner.table.category}</div>
               <div style={{ fontWeight: '600' }}>{productData.category?.name || 'N/A'}</div>
             </div>
             <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--sd-text-muted)' }}>Current Stock</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--sd-text-muted)' }}>{textData.barcodeScanner.table.stock}</div>
               <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: productData.quantity <= (productData.minStockLevel || 50) ? '#ef4444' : '#16a34a' }}>
-                {productData.quantity} Units
+                {productData.quantity} {textData.barcodeScanner.units}
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--sd-text-muted)' }}>Location</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--sd-text-muted)' }}>{textData.barcodeScanner.table.location}</div>
               <div style={{ fontWeight: '600' }}>{productData.storageLocation || 'Unassigned'}</div>
             </div>
             <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--sd-text-muted)' }}>Price</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--sd-text-muted)' }}>{textData.barcodeScanner.table.price}</div>
               <div style={{ fontWeight: '600' }}>${productData.sellingPrice?.toFixed(2) || '0.00'}</div>
             </div>
             <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--sd-text-muted)' }}>Supplier</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--sd-text-muted)' }}>{textData.barcodeScanner.table.supplier}</div>
               <div style={{ fontWeight: '600' }}>{productData.supplier?.name || 'N/A'}</div>
             </div>
           </div>
@@ -191,7 +192,7 @@ const BarcodeScannerWidget = ({ onActionRedirect }) => {
                   style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                 >
                   <ArrowRightCircle size={20} />
-                  Record Movement for this Product
+                  {textData.barcodeScanner.recordMovement}
                </button>
             </div>
           )}
@@ -201,7 +202,7 @@ const BarcodeScannerWidget = ({ onActionRedirect }) => {
       {scanResult && !loading && (
         <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
           <button onClick={resumeScanning} className="sd-btn sd-btn-primary" style={{ width: '100%', maxWidth: '300px' }}>
-            Scan Another Item
+            {textData.barcodeScanner.scanAnother}
           </button>
         </div>
       )}

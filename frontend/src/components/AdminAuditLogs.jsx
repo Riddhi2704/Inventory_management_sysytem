@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { History, Loader2, ArrowRight } from 'lucide-react';
+import textData from '../constants/textData';
 
 export default function AdminAuditLogs() {
   const { user } = useAuth();
@@ -11,7 +12,7 @@ export default function AdminAuditLogs() {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/logs/movement', {
+        const res = await axios.get('http://localhost:5001/api/logs/movement', {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         setLogs(res.data);
@@ -36,9 +37,9 @@ export default function AdminAuditLogs() {
         <div>
           <h2 className="text-xl font-bold text-slate-900 flex items-center">
             <History className="w-5 h-5 mr-2 text-brand-500" />
-            System Audit Logs
+            {textData.adminAuditLogs.title}
           </h2>
-          <p className="text-sm text-slate-500 mt-1">Track comprehensive movement and inventory adjustments.</p>
+          <p className="text-sm text-slate-500 mt-1">{textData.adminAuditLogs.subtitle}</p>
         </div>
       </div>
 
@@ -46,24 +47,24 @@ export default function AdminAuditLogs() {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-100 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0">
-              <th className="p-4">Date & Time</th>
-              <th className="p-4">Action/Reason</th>
-              <th className="p-4">Product Detail</th>
-              <th className="p-4">Qty</th>
-              <th className="p-4">Location Flow</th>
-              <th className="p-4">Performed By</th>
+              <th className="p-4">{textData.adminAuditLogs.table.dateTime}</th>
+              <th className="p-4">{textData.adminAuditLogs.table.action}</th>
+              <th className="p-4">{textData.adminAuditLogs.table.product}</th>
+              <th className="p-4">{textData.adminAuditLogs.table.qty}</th>
+              <th className="p-4">{textData.adminAuditLogs.table.location}</th>
+              <th className="p-4">{textData.adminAuditLogs.table.performedBy}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
                <tr>
                  <td colSpan="6" className="p-8 text-center text-slate-400">
-                   <Loader2 className="animate-spin h-8 w-8 mx-auto mb-2" /> Loading audit trail...
+                   <Loader2 className="animate-spin h-8 w-8 mx-auto mb-2" /> {textData.adminAuditLogs.loading}
                  </td>
                </tr>
             ) : logs.length === 0 ? (
                <tr>
-                 <td colSpan="6" className="p-8 text-center text-slate-500">No activity logged yet.</td>
+                 <td colSpan="6" className="p-8 text-center text-slate-500">{textData.adminAuditLogs.empty}</td>
                </tr>
             ) : (
                logs.map((log) => (
@@ -79,7 +80,7 @@ export default function AdminAuditLogs() {
                      </span>
                    </td>
                    <td className="p-4 text-sm font-semibold text-slate-800">{log.product?.name || 'Unknown Item'}</td>
-                   <td className="p-4 text-sm font-bold text-slate-900">{log.quantityMoved}</td>
+                   <td className="p-4 text-sm font-bold text-slate-900">{log.quantityMoved} {log.product?.unitType || 'pcs'}</td>
                    <td className="p-4 text-xs text-slate-500 flex items-center gap-2 mt-1">
                      <span className="truncate max-w-[80px] bg-slate-100 px-1 rounded">{log.fromLocation || 'N/A'}</span>
                      <ArrowRight size={12} className="text-slate-300 flex-shrink-0" />
