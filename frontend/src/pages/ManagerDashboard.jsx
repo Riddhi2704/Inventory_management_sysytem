@@ -7,7 +7,7 @@ import {
   AlertTriangle, TrendingUp, TrendingDown, DollarSign, Layers, Users,
   ArrowUpRight, ArrowDownRight, Filter, RefreshCcw, Loader2, IndianRupee, PieChart as PieIcon, Activity
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -25,7 +25,9 @@ const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'
 
 export default function ManagerDashboard() {
   const [stats, setStats] = useState(null);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'dashboard';
+  const setActiveTab = (tab) => setSearchParams({ tab });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   
