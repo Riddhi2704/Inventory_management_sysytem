@@ -8,7 +8,11 @@ const getMovementLogs = async (req, res) => {
   try {
     const shopName = req.user.shopName;
     const logs = await MovementLog.find({ shopName })
-      .populate('product', 'name')
+      .populate({
+        path: 'product',
+        select: 'name sellingPrice purchasePrice category',
+        populate: { path: 'category', select: 'name' }
+      })
       .populate('movedBy', 'fullName role')
       .sort({ createdAt: -1 });
     res.json(logs);

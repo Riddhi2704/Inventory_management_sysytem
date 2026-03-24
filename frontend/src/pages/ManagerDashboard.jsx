@@ -17,6 +17,7 @@ import CategorySupplierManager from '../components/CategorySupplierManager';
 import PurchaseOrderManager from '../components/PurchaseOrderManager';
 import ProductManagement from '../components/ProductManagement';
 import Profile from '../components/Profile';
+import ManagerLogAnalysis from '../components/ManagerLogAnalysis';
 import textData from '../constants/textData';
 import './ManagerDashboard.css';
 
@@ -611,6 +612,7 @@ export default function ManagerDashboard() {
           {activeTab === 'products' && <ProductManagement />}
           {activeTab === 'categories' && <CategorySupplierManager />}
           {activeTab === 'orders' && <PurchaseOrderManager />}
+          {activeTab === 'movements' && <ManagerLogAnalysis />}
 
           {(activeTab !== 'dashboard' && activeTab !== 'profile' && activeTab !== 'approvals' && activeTab !== 'products' && activeTab !== 'categories' && activeTab !== 'orders' && activeTab !== 'movements') && (
             <div className="placeholder-view">
