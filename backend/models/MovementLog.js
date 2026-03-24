@@ -7,7 +7,9 @@ const movementLogSchema = new mongoose.Schema({
   toLocation: { type: String },
   movedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   reason: { type: String }, // e.g., 'Restock', 'Store display', 'Damage', 'Return'
-  shopName: { type: String, required: true }
+  shopName: { type: String, required: true },
+  productName: { type: String },
+  categoryName: { type: String }
 }, { timestamps: true });
 
 module.exports = mongoose.model('MovementLog', movementLogSchema);

@@ -11,6 +11,7 @@ export default function UserManagement() {
     const [showModal, setShowModal] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
     const [formData, setFormData] = useState({ fullName: '', email: '', role: 'Staff', shopName: '', password: '' });
+    const [shopList, setShopList] = useState([]);
 
     const fetchUsers = async () => {
         try {
@@ -18,6 +19,11 @@ export default function UserManagement() {
                 headers: { Authorization: `Bearer ${user.token}` }
             });
             setUsers(res.data);
+            
+            const shopsRes = await axios.get('http://localhost:5001/api/admin/shops', {
+                headers: { Authorization: `Bearer ${user.token}` }
+            });
+            setShopList(shopsRes.data.map(s => s.shopName));
         } catch (err) {
             console.error("Failed to fetch users", err);
         } finally {
@@ -171,7 +177,12 @@ export default function UserManagement() {
                                 </div>
                                 <div className="ap-form-group">
                                     <label className="ap-label">Shop Name (for Managers/Staff)</label>
-                                    <input className="ap-input" value={formData.shopName} onChange={e => setFormData({...formData, shopName: e.target.value})} />
+                                    <input className="ap-input" list="existing-shops" value={formData.shopName} onChange={e => setFormData({...formData, shopName: e.target.value})} placeholder="Select or type new..." />
+                                    <datalist id="existing-shops">
+                                        {shopList.map((shop, i) => (
+                                            <option key={i} value={shop} />
+                                        ))}
+                                    </datalist>
                                 </div>
                                 <div className="ap-form-group">
                                     <label className="ap-label">Password {editingUser && '(Leave blank to keep current)'}</label>

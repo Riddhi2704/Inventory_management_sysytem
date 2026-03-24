@@ -61,7 +61,8 @@ export default function ManagerDashboard() {
   const filteredMovements = useMemo(() => {
     if (!stats?.recentMovements) return [];
     return stats.recentMovements.filter(m => {
-      const matchesSearch = (m.product?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const nameToSearch = m.product?.name || m.productName || (m.reason?.startsWith('Deleted: ') ? m.reason.split('Deleted: ')[1] : '');
+      const matchesSearch = nameToSearch.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesReason = filterReason === 'All' || m.reason === filterReason;
       return matchesSearch && matchesReason;
     });
@@ -388,9 +389,11 @@ export default function ManagerDashboard() {
                     <tbody>
                       {filteredMovements.slice(0, 10).map((log, i) => (
                         <tr key={i}>
-                          <td style={{ fontWeight: 600, color: '#1e293b' }}>{log.product?.name || 'Item Removed'}</td>
-                          <td>{log.product?.category?.name || 'N/A'}</td>
-                          <td>{log.quantityMoved} {log.product?.unitType || 'pcs'}</td>
+                          <td style={{ fontWeight: 600, color: '#1e293b' }}>
+                            {log.product?.name || log.productName || (log.reason?.startsWith('Deleted: ') ? log.reason.split('Deleted: ')[1] : 'Item Removed')}
+                          </td>
+                          <td>{log.product?.category?.name || log.categoryName || 'N/A'}</td>
+                          <td>{log.quantityMoved || 0} {log.product?.unitType || 'pcs'}</td>
                           <td>
                             <span className={`status-badge status-${log.reason?.replace(/\s/g, '').toLowerCase()}`}>
                               {log.reason?.includes('Deleted') ? <TrendingDown size={14} /> : (['Sale', 'Damage'].includes(log.reason) ? <TrendingDown size={14} /> : <TrendingUp size={14} />)}

@@ -147,7 +147,7 @@ const updateProduct = async (req, res) => {
     // Log the edit action in Recent Activity
     await MovementLog.create({
       product: updatedProduct._id,
-      quantityMoved: 0,
+      quantityMoved: updatedProduct.quantity,
       movedBy: req.user.id,
       reason: 'Edited',
       shopName
@@ -372,7 +372,7 @@ const updateProductQuantity = async (req, res) => {
 const deleteProduct = async (req, res) => {
   try {
     const shopName = req.user.shopName;
-    const product = await Product.findOne({ _id: req.params.id, shopName });
+    const product = await Product.findOne({ _id: req.params.id, shopName }).populate('category', 'name');
 
     if (!product) {
       return res.status(404).json({ message: 'Product not found or access denied' });
@@ -381,10 +381,12 @@ const deleteProduct = async (req, res) => {
     // Log the delete action in Recent Activity before removing
     await MovementLog.create({
       product: product._id,
-      quantityMoved: 0,
+      quantityMoved: product.quantity || 0,
       movedBy: req.user.id,
-      reason: `Deleted: ${product.name}`,
-      shopName
+      reason: `Deleted`,
+      shopName,
+      productName: product.name,
+      categoryName: product.category ? product.category.name : 'N/A'
     });
 
     await product.deleteOne();
@@ -409,7 +411,7 @@ const getProductStats = async (req, res) => {
     
     console.log(`[getProductStats] Applied filter:`, shopFilter);
 
-    const totalProducts = await Product.countDocuments(shopFilter);
+    const totalProducts = await Product.countDocuments({ ...shopFilter, status: 'Active' });
     const outOfStock = await Product.countDocuments({ ...shopFilter, quantity: 0 });
     const lowStock = await Product.countDocuments({ 
       ...shopFilter, 

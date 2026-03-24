@@ -24,7 +24,7 @@ const getManagerDashboardStats = async (req, res) => {
     const shopFilter = { shopName: { $regex: shopName, $options: 'i' } };
 
     // 1. Summary Cards
-    const totalProducts = await Product.countDocuments(shopFilter);
+    const totalProducts = await Product.countDocuments({ ...shopFilter, status: 'Active' });
     const outOfStock = await Product.countDocuments({ ...shopFilter, quantity: 0 });
     const pendingApproval = await Product.countDocuments({ ...shopFilter, status: 'Pending Approval' });
     const lowStock = await Product.countDocuments({ ...shopFilter, quantity: { $gt: 0, $lt: 5 } });

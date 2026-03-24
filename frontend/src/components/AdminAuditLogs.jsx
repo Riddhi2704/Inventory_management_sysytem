@@ -52,7 +52,7 @@ export default function AdminAuditLogs() {
     // 1. Search filter
     const searchVal = search.toLowerCase();
     const actionSearch = (log.reason || '').toLowerCase().includes(searchVal);
-    const productSearch = (log.product?.name || '').toLowerCase().includes(searchVal);
+    const productSearch = (log.product?.name || log.productName || '').toLowerCase().includes(searchVal);
     const matchesSearch = actionSearch || productSearch;
 
     // 2. Action dropdown filter
@@ -97,7 +97,7 @@ export default function AdminAuditLogs() {
     const rows = filteredLogs.map(log => [
         new Date(log.createdAt).toLocaleString(),
         log.reason || 'Movement',
-        `"${log.product?.name || 'Unknown'}"`,
+        `"${log.product?.name || log.productName || 'Unknown Item'}"`,
         log.quantityMoved || 0,
         log.movedBy?.fullName || 'System',
         log.movedBy?.role || 'Staff'
@@ -194,8 +194,8 @@ export default function AdminAuditLogs() {
                   const dateObj = new Date(log.createdAt);
                   
                   let badgeText = log.reason || 'Movement';
-                  let productName = log.product?.name;
-                  let productCategory = log.product?.category || 'Uncategorized';
+                  let productName = log.product?.name || log.productName;
+                  let productCategory = log.product?.category || (log.categoryName ? log.categoryName : 'Uncategorized');
                   let displayQuantity = log.quantityMoved;
                   let displayUnit = log.product?.unitType || 'pcs';
 

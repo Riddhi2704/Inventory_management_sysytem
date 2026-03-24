@@ -79,7 +79,7 @@ export default function SystemAuditLogs() {
     if (searchQuery) {
       const lowerQ = searchQuery.toLowerCase();
       result = result.filter(log => {
-        const prodName = (log.product?.name || '').toLowerCase();
+        const prodName = (log.product?.name || log.productName || '').toLowerCase();
         const userName = (log.movedBy?.fullName || '').toLowerCase();
         const action = (log.reason || '').toLowerCase();
         return prodName.includes(lowerQ) || userName.includes(lowerQ) || action.includes(lowerQ);
@@ -176,7 +176,7 @@ export default function SystemAuditLogs() {
     const rows = filteredLogs.map(log => [
         new Date(log.createdAt).toLocaleString(),
         log.reason || 'Movement',
-        log.product?.name || 'Unknown',
+        log.product?.name || log.productName || 'Unknown Product',
         log.quantityMoved || 0,
         log.movedBy?.fullName || 'System',
         log.movedBy?.role || 'Staff'
@@ -340,7 +340,7 @@ export default function SystemAuditLogs() {
                       </span>
                     </td>
                     <td className="sal-cell-product">
-                      {log.product?.name || 'Unknown Product'}
+                      {log.product?.name || log.productName || 'Unknown Product'}
                     </td>
                     <td>
                       <span className="sal-qty-pill">{log.quantityMoved || 0}</span>

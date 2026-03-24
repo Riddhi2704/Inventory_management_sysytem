@@ -1,23 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Users, Package, AlertTriangle, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { LayoutDashboard, Users, Package, AlertTriangle, TrendingUp, TrendingDown, DollarSign, UserCog, Building } from 'lucide-react';
 import AdminCharts from '../AdminCharts';
-import AdminAlerts from '../AdminAlerts';
 import AdminAuditLogs from '../AdminAuditLogs';
 
 export default function AdminOverview({ onNavigate }) {
     const { user } = useAuth();
     const [stats, setStats] = useState(null);
+    const [extraStats, setExtraStats] = useState({ staff: 0, managers: 0, organizations: 0 });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const res = await axios.get('http://localhost:5001/api/admin/dashboard', {
-                    headers: { Authorization: `Bearer ${user.token}` }
+                const [resStats, resStaff, resManagers, resOrgs] = await Promise.all([
+                    axios.get('http://localhost:5001/api/admin/dashboard', { headers: { Authorization: `Bearer ${user.token}` } }),
+                    axios.get('http://localhost:5001/api/admin/total-staff', { headers: { Authorization: `Bearer ${user.token}` } }),
+                    axios.get('http://localhost:5001/api/admin/total-managers', { headers: { Authorization: `Bearer ${user.token}` } }),
+                    axios.get('http://localhost:5001/api/admin/total-organizations', { headers: { Authorization: `Bearer ${user.token}` } })
+                ]);
+                setStats(resStats.data);
+                setExtraStats({
+                    staff: resStaff.data.count,
+                    managers: resManagers.data.count,
+                    organizations: resOrgs.data.count
                 });
-                setStats(res.data);
             } catch (err) {
                 console.error("Failed to fetch admin stats", err);
             } finally {
@@ -27,8 +35,8 @@ export default function AdminOverview({ onNavigate }) {
         fetchStats();
     }, [user.token]);
 
-    const StatCard = ({ label, value, icon: Icon, type, change, isDown }) => (
-        <div className="ap-stat-card">
+    const StatCard = ({ label, value, icon: Icon, type, change, isDown, onClick }) => (
+        <div className="ap-stat-card" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default', transition: 'transform 0.2s', ...(onClick ? { ':hover': { transform: 'translateY(-2px)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' } } : {}) }}>
             <div className={`ap-stat-icon ap-badge-${type}`}>
                 <Icon size={22} />
             </div>
@@ -77,23 +85,35 @@ export default function AdminOverview({ onNavigate }) {
                 />
                 <StatCard 
                     label="Critical Alerts" 
-                    value={stats?.outOfStockProducts || 0} 
+                    value={(stats?.outOfStockProducts || 0) + (stats?.lowStockProducts || 0)} 
                     icon={AlertTriangle} 
                     type="red" 
-                    change={stats?.outOfStockProducts > 0 ? "Action required" : "All good"}
-                    isDown={stats?.outOfStockProducts > 0}
+                    change={((stats?.outOfStockProducts || 0) + (stats?.lowStockProducts || 0)) > 0 ? "Action required" : "All good"}
+                    isDown={((stats?.outOfStockProducts || 0) + (stats?.lowStockProducts || 0)) > 0}
+                    onClick={() => onNavigate('alerts')}
+                />
+                <StatCard 
+                    label="Total Managers" 
+                    value={extraStats.managers} 
+                    icon={UserCog} 
+                    type="blue" 
+                />
+                <StatCard 
+                    label="Total Staff" 
+                    value={extraStats.staff} 
+                    icon={Users} 
+                    type="purple" 
+                />
+                <StatCard 
+                    label="Total Organizations" 
+                    value={extraStats.organizations} 
+                    icon={Building} 
+                    type="green" 
                 />
             </div>
 
-            <div className="ap-charts-row">
-                <div className="ap-card">
-                    <div className="ap-card-title">System Analytics</div>
-                    <AdminCharts />
-                </div>
-                <div className="ap-card">
-                    <div className="ap-card-title">Critical Monitoring</div>
-                    <AdminAlerts />
-                </div>
+            <div style={{ marginTop: '2rem' }}>
+                <AdminCharts />
             </div>
 
             <div className="ap-card">

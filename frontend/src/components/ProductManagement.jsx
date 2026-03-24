@@ -33,7 +33,7 @@ export default function ProductManagement() {
   // Pagination
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [limit] = useState(10);
+  const [limit] = useState(100);
 
   // Modals
   const [showEditModal, setShowEditModal] = useState(false);
@@ -67,7 +67,6 @@ export default function ProductManagement() {
         supplier: supplierFilter,
         lowStock: statusFilter === 'Low Stock' ? 'true' : 'false',
         status: 'Active',
-        unique: 'true',
         paginate: 'true'
       });
 
@@ -75,24 +74,12 @@ export default function ProductManagement() {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       
-      // Handle response based on structure (in case API isn't updated yet)
+      // Handle response based on structure
       if (productsRes.data.products) {
-        // Deduplicate in frontend as a fallback for large datasets if needed, 
-        // though backend aggregation should handle it.
-        const uniqueProducts = productsRes.data.products.filter((product, index, self) => 
-          index === self.findIndex((p) => 
-            p.name === product.name && p.brand === product.brand
-          )
-        );
-        setProducts(uniqueProducts);
+        setProducts(productsRes.data.products);
         setTotalPages(productsRes.data.pagination.pages);
       } else {
-        const uniqueProducts = Array.isArray(productsRes.data) ? productsRes.data.filter((product, index, self) => 
-          index === self.findIndex((p) => 
-            p.name === product.name && p.brand === product.brand
-          )
-        ) : [];
-        setProducts(uniqueProducts);
+        setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
         setTotalPages(1);
       }
 

@@ -30,7 +30,7 @@ export default function ProductList() {
     if (!user?.token) return;
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/products?unique=true`, {
+      const res = await axios.get(`${API}/products`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       console.log('[ProductList] Data loaded:', res.data);
@@ -95,16 +95,11 @@ export default function ProductList() {
     }
   };
 
-  const filteredProducts = products
-    .filter(p => 
-      p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.productId?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .filter((product, index, self) => 
-      index === self.findIndex((p) => 
-        p.name === product.name && p.brand === product.brand
-      )
-    );
+  const filteredProducts = products.filter(p => 
+    p.status !== 'Rejected' && 
+    (p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.productId?.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   return (
     <div className="pl-container" style={{ padding: '1rem' }}>
@@ -137,7 +132,7 @@ export default function ProductList() {
                 <th>{textData.productList.table.qty}</th>
                 <th>{textData.productList.table.price}</th>
                 <th>{textData.productList.table.status}</th>
-                <th>{textData.productList.table.actions}</th>
+                {user?.role !== 'Admin' && <th>{textData.productList.table.actions}</th>}
               </tr>
             </thead>
             <tbody>
@@ -164,12 +159,14 @@ export default function ProductList() {
                       {p.status}
                     </span>
                   </td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button onClick={() => handleEdit(p)} title="Edit" style={{ background: '#f1f5f9', border: 'none', padding: '6px', borderRadius: '4px', cursor: 'pointer', color: '#6366f1' }}><Pencil size={16} /></button>
-                      <button onClick={() => handleDelete(p._id)} title="Delete" style={{ background: '#f1f5f9', border: 'none', padding: '6px', borderRadius: '4px', cursor: 'pointer', color: '#ef4444' }}><Trash2 size={16} /></button>
-                    </div>
-                  </td>
+                  {user?.role !== 'Admin' && (
+                    <td>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button onClick={() => handleEdit(p)} title="Edit" style={{ background: '#f1f5f9', border: 'none', padding: '6px', borderRadius: '4px', cursor: 'pointer', color: '#6366f1' }}><Pencil size={16} /></button>
+                        <button onClick={() => handleDelete(p._id)} title="Delete" style={{ background: '#f1f5f9', border: 'none', padding: '6px', borderRadius: '4px', cursor: 'pointer', color: '#ef4444' }}><Trash2 size={16} /></button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
