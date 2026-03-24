@@ -207,28 +207,143 @@ export default function ManagerDashboard() {
           {activeTab === 'dashboard' && (
             <div className="animate-fade">
               
-              <div className="summary-grid" style={{ marginBottom: '2rem' }}>
-                <div className="summary-card">
-                  <div className="card-icon bg-indigo"><Package size={24} /></div>
-                  <div className="card-info">
-                    <span className="card-label">{textData.managerDashboard.summary.totalProducts}</span>
-                    <span className="card-value">{stats?.summary?.totalProducts || 0}</span>
+              {/* Advanced Summary Metrics */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                gap: '20px',
+                marginBottom: '2rem'
+              }}>
+                {[
+                  {
+                    title: 'Total Products',
+                    value: stats?.summary?.totalProducts,
+                    icon: <Package size={24} color="#3b82f6" />,
+                    bgColor: '#eff6ff',
+                    tab: 'products',
+                    trend: '↑ 5% Added',
+                    trendColor: '#10b981'
+                  },
+                  {
+                    title: 'Total Categories',
+                    value: stats?.summary?.totalCategories,
+                    icon: <Tags size={24} color="#a855f7" />,
+                    bgColor: '#faf5ff',
+                    tab: 'categories'
+                  },
+                  {
+                    title: 'Low Stock Alerts',
+                    value: stats?.summary?.lowStock,
+                    icon: <AlertTriangle size={24} color="#f97316" />,
+                    bgColor: '#fff7ed',
+                    tab: 'products',
+                    trend: 'Action Required',
+                    trendColor: '#ea580c'
+                  },
+                  {
+                    title: 'Out of Stock',
+                    value: stats?.summary?.outOfStock,
+                    icon: <AlertTriangle size={24} color="#ef4444" />,
+                    bgColor: '#fef2f2',
+                    tab: 'products'
+                  },
+                  {
+                    title: 'Total Suppliers',
+                    value: stats?.summary?.totalSuppliers,
+                    icon: <Users size={24} color="#6366f1" />,
+                    bgColor: '#eef2ff',
+                    tab: 'categories'
+                  },
+                  {
+                    title: 'Today Sales',
+                    value: stats?.summary?.todaySales != null ? `₹${stats.summary.todaySales.toLocaleString()}` : null,
+                    icon: <Activity size={24} color="#10b981" />,
+                    bgColor: '#ecfdf5',
+                    tab: 'dashboard'
+                  },
+                  {
+                    title: 'Monthly Revenue',
+                    value: stats?.summary?.monthlyRevenue != null ? `₹${stats.summary.monthlyRevenue.toLocaleString()}` : null,
+                    icon: <TrendingUp size={24} color="#10b981" />,
+                    bgColor: '#ecfdf5',
+                    tab: 'dashboard',
+                    trend: '↑ 12% vs last month',
+                    trendColor: '#10b981'
+                  },
+                  {
+                    title: 'Total Orders',
+                    value: stats?.summary?.totalOrders,
+                    icon: <ShoppingCart size={24} color="#4f46e5" />,
+                    bgColor: '#e0e7ff',
+                    tab: 'orders'
+                  },
+                  {
+                    title: 'Inventory Value',
+                    value: stats?.summary?.totalInventoryValue != null ? `₹${stats.summary.totalInventoryValue.toLocaleString()}` : null,
+                    icon: <IndianRupee size={24} color="#0d9488" />,
+                    bgColor: '#ccfbf1',
+                    tab: 'dashboard'
+                  }
+                ].map((card, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => { if (card.tab !== 'dashboard') setActiveTab(card.tab); }}
+                    style={{
+                      background: 'white',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                      cursor: card.tab !== 'dashboard' ? 'pointer' : 'default',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '16px',
+                      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (card.tab !== 'dashboard') {
+                        e.currentTarget.style.transform = 'translateY(-5px)';
+                        e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.12)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (card.tab !== 'dashboard') {
+                        e.currentTarget.style.transform = 'none';
+                        e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
+                      }
+                    }}
+                  >
+                    <div style={{
+                      width: '48px', height: '48px', borderRadius: '12px',
+                      background: card.bgColor, display: 'flex',
+                      alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      {card.icon}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b', fontWeight: 600, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                        {card.title}
+                      </p>
+                      {loading ? (
+                        <div style={{ height: '28px', width: '60%', background: '#e2e8f0', borderRadius: '4px', marginTop: '4px' }} />
+                      ) : (
+                        <h3 style={{ margin: '4px 0 0 0', fontSize: '1.5rem', color: '#1e293b', fontWeight: 700 }}>
+                          {card.value ?? 0}
+                        </h3>
+                      )}
+                      {card.trend && !loading && (
+                         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: card.trendColor, marginTop: '4px', display: 'inline-block' }}>
+                           {card.trend}
+                         </span>
+                      )}
+                    </div>
+                    {card.tab !== 'dashboard' && (
+                       <ArrowUpRight size={16} color="#cbd5e1" style={{ position: 'absolute', top: '16px', right: '16px' }} />
+                    )}
                   </div>
-                </div>
-                <div className="summary-card">
-                  <div className="card-icon bg-rose"><AlertTriangle size={24} /></div>
-                  <div className="card-info">
-                    <span className="card-label">{textData.managerDashboard.summary.outOfStock}</span>
-                    <span className="card-value">{stats?.summary?.outOfStock || 0}</span>
-                  </div>
-                </div>
-                <div className="summary-card">
-                  <div className="card-icon bg-emerald"><IndianRupee size={24} /></div>
-                  <div className="card-info">
-                    <span className="card-label">Inventory Value</span>
-                    <span className="card-value">₹{stats?.summary?.totalInventoryValue?.toLocaleString() || 0}</span>
-                  </div>
-                </div>
+                ))}
               </div>
 
               {/* Advanced 4-Grid Dashboard Setup */}

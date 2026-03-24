@@ -2,6 +2,7 @@ const Product = require('../models/Product');
 const MovementLog = require('../models/MovementLog');
 const Category = require('../models/Category');
 const Supplier = require('../models/Supplier');
+const PurchaseOrder = require('../models/PurchaseOrder');
 
 // @desc    Get Manager Dashboard Stats
 // @route   GET /api/manager/dashboard
@@ -29,6 +30,20 @@ const getManagerDashboardStats = async (req, res) => {
     const pendingApproval = await Product.countDocuments({ ...shopFilter, status: 'Pending Approval' });
     const lowStock = await Product.countDocuments({ ...shopFilter, quantity: { $gt: 0, $lt: 5 } });
     
+    // 3. Category Distribution
+    const categoryStats = await Product.aggregate([
+      { $match: shopFilter },
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+      { $lookup: { from: 'categories', localField: '_id', foreignField: '_id', as: 'categoryInfo' } },
+      { $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } },
+      { $project: { name: '$categoryInfo.name', count: 1 } }
+    ]);
+
+    // New Metrics for Updated Dashboard (Strictly filtered to Manager's own shop)
+    const totalCategories = categoryStats.length;
+    const totalSuppliers = await Supplier.countDocuments(shopFilter);
+    const totalOrders = await PurchaseOrder.countDocuments(shopFilter).catch(() => 0);
+    
     const products = await Product.find({ ...shopFilter, status: 'Active' });
     let totalInventoryValue = 0;
     let totalPurchaseValue = 0;
@@ -46,37 +61,38 @@ const getManagerDashboardStats = async (req, res) => {
       quantity: { $lt: 5 } 
     }).select('name quantity').limit(5);
 
-    // 3. Category Distribution
-    const categoryStats = await Product.aggregate([
-      { $match: shopFilter },
-      { $group: { _id: '$category', count: { $sum: 1 } } },
-      { $lookup: { from: 'categories', localField: '_id', foreignField: '_id', as: 'categoryInfo' } },
-      { $unwind: '$categoryInfo' },
-      { $project: { name: '$categoryInfo.name', count: 1 } }
-    ]);
-
     // 4. Sales & Profit Analytics (from MovementLog)
+    // Use relative time boundaries (last 24h and last 30d) to avoid timezone-related 0 values
+    const startOfMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const startOfDay = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const queryStartDate = new Date(Math.min(thirtyDaysAgo.getTime(), startOfMonth.getTime()));
+
     const movements = await MovementLog.find({ 
       ...shopFilter,
-      createdAt: { $gte: thirtyDaysAgo }
+      createdAt: { $gte: queryStartDate }
     }).populate('product');
 
     let totalProfit = 0;
     const salesData = {}; // By date
     const productSales = {}; // By product
+    let todaySales = 0;
+    let monthlyRevenue = 0;
     const movementTrends = {}; // By date { added: 0, removed: 0 }
 
     movements.forEach(m => {
       const date = m.createdAt.toISOString().split('T')[0];
       if (!m.product) return;
 
-      const isSale = ['Sale', 'Sent Out'].includes(m.reason);
-      const isRestock = ['Restock', 'Return', 'Found'].includes(m.reason);
+      const isSale = /sale|sold|sent out/i.test(m.reason);
+      const isRestock = /restock|return|found|received/i.test(m.reason);
 
       if (isSale) {
         const rev = m.quantityMoved * m.product.sellingPrice;
         const cost = m.quantityMoved * m.product.purchasePrice;
         totalProfit += (rev - cost);
+        
+        if (m.createdAt >= startOfDay) todaySales += rev;
+        if (m.createdAt >= startOfMonth) monthlyRevenue += rev;
         
         salesData[date] = (salesData[date] || 0) + rev;
         
@@ -143,7 +159,12 @@ const getManagerDashboardStats = async (req, res) => {
         outOfStock,
         pendingApproval,
         totalInventoryValue,
-        lowStock
+        lowStock,
+        totalCategories,
+        totalSuppliers,
+        totalOrders,
+        todaySales,
+        monthlyRevenue
       },
       lowStockProducts,
       topSellingProducts,
