@@ -5,7 +5,7 @@ import {
   LayoutDashboard, CheckCircle, Package, Tags, Truck, ShoppingCart,
   BarChart3, History, FileText, Bell, LogOut, Plus, X, Search,
   AlertTriangle, TrendingUp, TrendingDown, DollarSign, Layers, Users,
-  ArrowUpRight, ArrowDownRight, Filter, RefreshCcw
+  ArrowUpRight, ArrowDownRight, Filter, RefreshCcw, Loader2, IndianRupee, PieChart as PieIcon, Activity
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -27,8 +27,19 @@ export default function ManagerDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // Activity Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [filterReason, setFilterReason] = useState('All');
+  
+  // Revenue Analytics Features
+  const [revenueCategory, setRevenueCategory] = useState('all');
+  const [revenueTime, setRevenueTime] = useState('month');
+  const [revenueSearch, setRevenueSearch] = useState('');
+  const [debouncedRevSearch, setDebouncedRevSearch] = useState('');
+  const [revenueData, setRevenueData] = useState([]);
+  const [revenueLoading, setRevenueLoading] = useState(false);
+
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -47,10 +58,36 @@ export default function ManagerDashboard() {
   };
 
   useEffect(() => {
-    if (activeTab === 'dashboard') {
-      fetchStats();
-    }
+    if (activeTab === 'dashboard') fetchStats();
   }, [user, activeTab]);
+
+  // Debounce for Revenue Search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedRevSearch(revenueSearch);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [revenueSearch]);
+
+  // Fetch Advanced Revenue Analytics Graph
+  useEffect(() => {
+    const fetchRevenueGraph = async () => {
+       if (activeTab !== 'dashboard') return;
+       setRevenueLoading(true);
+       try {
+          const res = await axios.get('http://localhost:5001/api/manager/analytics/revenue', {
+             params: { filterType: revenueTime, category: revenueCategory, productName: debouncedRevSearch },
+             headers: { Authorization: `Bearer ${user.token}` }
+          });
+          setRevenueData(res.data);
+       } catch (err) {
+          console.error("Revenue graph error:", err);
+       } finally {
+          setRevenueLoading(false);
+       }
+    };
+    if (user?.token) fetchRevenueGraph();
+  }, [revenueTime, revenueCategory, debouncedRevSearch, user, activeTab]);
 
   const handleLogout = () => {
     logout();
@@ -78,7 +115,31 @@ export default function ManagerDashboard() {
     { id: 'movements', label: textData.managerDashboard.tabs.logs, icon: <History size={20} /> },
   ];
 
-  // Removed the full-page loading block to ensure a smoother experience without jarring transitions.
+  // Custom Tooltip for Donut Chart
+  const CustomDonutTooltip = ({ active, payload }) => {
+     if (active && payload && payload.length) {
+        return (
+           <div style={{ background: 'white', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}>
+              <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: '#1e293b' }}>{payload[0].name}</p>
+              <p style={{ margin: 0, color: payload[0].payload.fill, fontWeight: 700 }}>{payload[0].value} Products Total</p>
+           </div>
+        );
+     }
+     return null;
+  };
+
+  // Custom Label for Donut Inner Percentage
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+     const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
+     const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
+     if (percent < 0.05) return null; // hide small percentages
+     return (
+        <text x={x} y={y} fill="white" fontSize="12" fontWeight="bold" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+           {`${(percent * 100).toFixed(0)}%`}
+        </text>
+     );
+  };
 
   return (
     <div className={`manager-dashboard ${sidebarOpen ? 'sidebar-mobile-open' : ''}`}>
@@ -132,7 +193,7 @@ export default function ManagerDashboard() {
           <div className="navbar-right">
             <div className="notification-badge"><Bell size={20} /></div>
             <div className="user-profile">
-              <div className="user-avatar" style={{ background: '#6366f1', color: '#white' }}>{user?.fullName?.charAt(0)}</div>
+              <div className="user-avatar" style={{ background: '#6366f1', color: 'white' }}>{user?.fullName?.charAt(0)}</div>
               <div className="user-info">
                 <span className="user-name">{user?.fullName}</span>
                 <span className="user-role">{textData.managerDashboard.sidebarTitle}</span>
@@ -145,8 +206,8 @@ export default function ManagerDashboard() {
         <div className="dashboard-content">
           {activeTab === 'dashboard' && (
             <div className="animate-fade">
-              {/* Summary Cards */}
-              <div className="summary-grid">
+              
+              <div className="summary-grid" style={{ marginBottom: '2rem' }}>
                 <div className="summary-card">
                   <div className="card-icon bg-indigo"><Package size={24} /></div>
                   <div className="card-info">
@@ -155,261 +216,278 @@ export default function ManagerDashboard() {
                   </div>
                 </div>
                 <div className="summary-card">
-                  <div className="card-icon bg-rose"><X size={24} /></div>
+                  <div className="card-icon bg-rose"><AlertTriangle size={24} /></div>
                   <div className="card-info">
                     <span className="card-label">{textData.managerDashboard.summary.outOfStock}</span>
                     <span className="card-value">{stats?.summary?.outOfStock || 0}</span>
                   </div>
                 </div>
                 <div className="summary-card">
-                  <div className="card-icon bg-amber"><CheckCircle size={24} /></div>
+                  <div className="card-icon bg-emerald"><IndianRupee size={24} /></div>
                   <div className="card-info">
-                    <span className="card-label">{textData.managerDashboard.summary.pendingApproval}</span>
-                    <span className="card-value">{stats?.summary?.pendingApproval || 0}</span>
-                  </div>
-                </div>
-                <div className="summary-card">
-                  <div className="card-icon bg-emerald"><DollarSign size={24} /></div>
-                  <div className="card-info">
-                    <span className="card-label">{textData.managerDashboard.summary.inventoryValue}</span>
+                    <span className="card-label">Inventory Value</span>
                     <span className="card-value">₹{stats?.summary?.totalInventoryValue?.toLocaleString() || 0}</span>
-                  </div>
-                </div>
-                <div className="summary-card">
-                  <div className="card-icon bg-violet"><AlertTriangle size={24} /></div>
-                  <div className="card-info">
-                    <span className="card-label">{textData.managerDashboard.summary.lowStock}</span>
-                    <span className="card-value">{stats?.summary?.lowStock || 0}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Analytics Grid */}
-              <div className="analytics-grid">
-                {/* 1. Low Stock Alert */}
-                <div className="analytics-card">
-                  <h4><AlertTriangle size={18} color="#f59e0b" /> {textData.managerDashboard.analytics.lowStockAlert}</h4>
-                  <div className="info-list">
-                    {stats?.lowStockProducts?.length > 0 ? stats.lowStockProducts.map((p, i) => (
-                      <div className="info-item" key={i}>
-                        <div className="item-main">
-                          <Package size={16} />
-                          <span>{p.name}</span>
-                        </div>
-                        <span className="badge" style={{ background: '#fef3c7', color: '#92400e' }}>
-                          {p.quantity} {p.unitType || 'pcs'} left
-                        </span>
-                      </div>
-                    )) : <p style={{ color: '#64748b', textAlign: 'center' }}>All items well stocked.</p>}
-                  </div>
-                </div>
-
-                {/* 2. Top Selling Products */}
-                <div className="analytics-card">
-                  <h4><TrendingUp size={18} color="#10b981" /> {textData.managerDashboard.analytics.topSelling}</h4>
-                  <div className="chart-container">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={stats?.topSellingProducts}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} style={{ fontSize: 10 }} />
-                        <YAxis axisLine={false} tickLine={false} style={{ fontSize: 10 }} />
-                        <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                        <Bar dataKey="totalSold" fill="#6366f1" radius={[4, 4, 0, 0]} name="Qty Sold" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                {/* 3. Category Distribution */}
-                <div className="analytics-card">
-                  <h4><Layers size={18} color="#8b5cf6" /> {textData.managerDashboard.analytics.categoryDist}</h4>
-                  <div className="chart-container" style={{ display: 'flex', alignItems: 'center' }}>
+              {/* Advanced 4-Grid Dashboard Setup */}
+              <div className="analytics-grid" style={{ gap: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))' }}>
+                
+                {/* 1. Category Distribution (Donut Chart) */}
+                <div className="analytics-card" style={{ display: 'flex', flexDirection: 'column' }}>
+                  <h4><PieIcon size={20} color="#8b5cf6" /> Category Distribution</h4>
+                  <div style={{ flex: 1, position: 'relative', minHeight: '300px' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={stats?.categoryDistribution}
+                          data={stats?.categoryDistribution || []}
                           cx="50%"
                           cy="50%"
-                          innerRadius={60}
-                          outerRadius={90}
+                          innerRadius={70}
+                          outerRadius={100}
                           paddingAngle={5}
                           dataKey="count"
-                          label
+                          labelLine={false}
+                          label={renderCustomizedLabel}
+                          animationBegin={0}
+                          animationDuration={1500}
                         >
                           {stats?.categoryDistribution?.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip />
-                        <Legend />
+                        <Tooltip content={<CustomDonutTooltip />} />
+                        <Legend verticalAlign="bottom" height={36} iconType="circle" />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
 
-                {/* 4. Sales Analytics */}
-                <div className="analytics-card">
-                  <h4><TrendingUp size={18} color="#6366f1" /> {textData.managerDashboard.analytics.salesTrend}</h4>
-                  <div className="chart-container">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={stats?.salesAnalytics}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                        <XAxis dataKey="date" axisLine={false} tickLine={false} style={{ fontSize: 10 }} />
-                        <YAxis axisLine={false} tickLine={false} style={{ fontSize: 10 }} />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={3} dot={{ r: 4, fill: '#6366f1' }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                {/* 5. Profit Analysis */}
-                <div className="analytics-card">
-                  <h4><DollarSign size={18} color="#10b981" /> {textData.managerDashboard.analytics.profitAnalysis}</h4>
-                  <div className="profit-grid">
-                    <div className="profit-stat">
-                      <span className="profit-label">{textData.managerDashboard.profit.purchaseValue}</span>
-                      <span className="profit-val" style={{ color: '#64748b' }}>₹{stats?.profitAnalysis?.totalPurchaseValue?.toLocaleString()}</span>
-                    </div>
-                    <div className="profit-stat">
-                      <span className="profit-label">{textData.managerDashboard.profit.sellingValue}</span>
-                      <span className="profit-val" style={{ color: '#64748b' }}>₹{stats?.profitAnalysis?.totalSellingValue?.toLocaleString()}</span>
-                    </div>
-                    <div className="profit-stat" style={{ background: '#d1fae5', border: '1px solid #10b981' }}>
-                      <span className="profit-label" style={{ color: '#047857' }}>{textData.managerDashboard.profit.actualProfit}</span>
-                      <span className="profit-val" style={{ color: '#059669' }}>₹{stats?.profitAnalysis?.totalProfit?.toLocaleString()}</span>
-                    </div>
-                  </div>
-                  <div style={{ marginTop: '1.5rem' }}>
-                    <p style={{ fontSize: '0.8rem', color: '#64748b' }}>{textData.managerDashboard.profit.potentialProfitNote}</p>
-                  </div>
-                </div>
-
-                {/* 6. Fast vs Slow Moving */}
-                <div className="analytics-card">
-                  <h4><RefreshCcw size={18} color="#06b6d4" /> {textData.managerDashboard.analytics.movementPerf}</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div>
-                      <h5 style={{ fontSize: '0.8rem', marginBottom: '0.5rem', color: '#10b981' }}>{textData.managerDashboard.activity.filterSales}</h5>
-                      {stats?.fastMoving?.map((p, i) => (
-                        <div key={i} className="info-item" style={{ padding: '0.5rem' }}>
-                          <span style={{ fontSize: '0.8rem' }}>{p.name}</span>
-                          <ArrowUpRight size={14} color="#10b981" />
+                {/* 2. Enhanced Sales Analytics Graph */}
+                <div className="analytics-card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '10px' }}>
+                     <h4 style={{ margin: 0 }}><Activity size={20} color="#6366f1" /> Dynamic Revenue Analytics</h4>
+                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <select 
+                           style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px' }}
+                           value={revenueCategory} 
+                           onChange={e => setRevenueCategory(e.target.value)}
+                        >
+                           <option value="all">All Categories</option>
+                           {stats?.categoryDistribution?.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                        </select>
+                        <select 
+                           style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px' }}
+                           value={revenueTime} 
+                           onChange={e => setRevenueTime(e.target.value)}
+                        >
+                           <option value="today">Today</option>
+                           <option value="week">This Week</option>
+                           <option value="month">This Month</option>
+                           <option value="year">This Year</option>
+                        </select>
+                        <div style={{ position: 'relative' }}>
+                           <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                           <input 
+                              placeholder="Search Product..." 
+                              value={revenueSearch}
+                              onChange={e => setRevenueSearch(e.target.value)}
+                              style={{ padding: '6px 12px 6px 30px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', width: '160px' }}
+                           />
                         </div>
-                      ))}
-                    </div>
-                    <div>
-                      <h5 style={{ fontSize: '0.8rem', marginBottom: '0.5rem', color: '#ef4444' }}>{textData.managerDashboard.activity.filterDamage}</h5>
-                      {stats?.slowMoving?.map((p, i) => (
-                        <div key={i} className="info-item" style={{ padding: '0.5rem' }}>
-                          <span style={{ fontSize: '0.8rem' }}>{p.name}</span>
-                          <ArrowDownRight size={14} color="#ef4444" />
+                     </div>
+                  </div>
+                  
+                  <div style={{ flex: 1, minHeight: '280px', position: 'relative' }}>
+                     {revenueLoading ? (
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.7)', zIndex: 10 }}>
+                           <Loader2 className="animate-spin" size={32} color="#6366f1" />
                         </div>
-                      ))}
+                     ) : revenueData.length === 0 ? (
+                        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+                           <BarChart3 size={32} style={{ marginBottom: '8px', opacity: 0.5 }} />
+                           <span>No Revenue Data Available</span>
+                        </div>
+                     ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                            <XAxis dataKey="date" axisLine={false} tickLine={false} style={{ fontSize: 11, fill: '#64748b' }} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} style={{ fontSize: 11, fill: '#64748b' }} />
+                            <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                            <Area type="monotone" dataKey="revenue" name="Total Revenue" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" animationDuration={1000} />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                     )}
+                  </div>
+                </div>
+
+                {/* 3. Profit Analysis (Cards UI) */}
+                <div className="analytics-card">
+                  <h4><IndianRupee size={20} color="#10b981" /> Profit Margins & Value</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginTop: '1rem' }}>
+                    
+                    {/* Purchase Value */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem', background: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0', transition: 'transform 0.2s' }}>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                          <div style={{ background: '#e2e8f0', padding: '10px', borderRadius: '10px' }}><ShoppingCart size={20} color="#475569" /></div>
+                          <div>
+                             <span style={{ display: 'block', fontSize: '0.8125rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Total Purchase Value</span>
+                             <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b' }}>₹{(stats?.profitAnalysis?.totalPurchaseValue || 0).toLocaleString()}</span>
+                          </div>
+                       </div>
                     </div>
+
+                    {/* Selling Value */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem', background: '#eff6ff', borderRadius: '16px', border: '1px solid #bfdbfe', transition: 'transform 0.2s' }}>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                          <div style={{ background: '#dbeafe', padding: '10px', borderRadius: '10px' }}><Tags size={20} color="#3b82f6" /></div>
+                          <div>
+                             <span style={{ display: 'block', fontSize: '0.8125rem', color: '#3b82f6', fontWeight: 600, textTransform: 'uppercase' }}>Est. Selling Value</span>
+                             <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e3a8a' }}>₹{(stats?.profitAnalysis?.totalSellingValue || 0).toLocaleString()}</span>
+                          </div>
+                       </div>
+                    </div>
+
+                    {/* Actual Profit */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem', background: '#ecfdf5', borderRadius: '16px', border: '1px solid #a7f3d0', transition: 'transform 0.2s' }}>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                          <div style={{ background: '#d1fae5', padding: '10px', borderRadius: '10px' }}><ArrowUpRight size={20} color="#059669" /></div>
+                          <div>
+                             <span style={{ display: 'block', fontSize: '0.8125rem', color: '#059669', fontWeight: 600, textTransform: 'uppercase' }}>Projected Net Profit</span>
+                             <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#064e3b' }}>₹{(stats?.profitAnalysis?.totalProfit || 0).toLocaleString()}</span>
+                          </div>
+                       </div>
+                       <div style={{ background: '#34d399', color: 'white', padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 'bold' }}>+12.4%</div>
+                    </div>
+
                   </div>
                 </div>
 
-                {/* 7. Supplier Contribution */}
+                {/* 4. Movement Performance */}
                 <div className="analytics-card">
-                  <h4><Truck size={18} color="#475569" /> {textData.managerDashboard.analytics.supplierContrib}</h4>
-                  <div className="chart-container">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={stats?.supplierContribution} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
-                        <XAxis type="number" hide />
-                        <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} style={{ fontSize: 10 }} width={80} />
-                        <Tooltip />
-                        <Bar dataKey="count" fill="#475569" radius={[0, 4, 4, 0]} name="Products Supplied" />
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <h4><RefreshCcw size={20} color="#06b6d4" /> Fast vs Slow Moving Inventory</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '1.5rem' }}>
+                    
+                    <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                      <h5 style={{ fontSize: '0.875rem', marginBottom: '1rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}><TrendingUp size={16}/> Top Sales Performer</h5>
+                      <div className="info-list">
+                         {stats?.fastMoving?.map((p, i) => (
+                           <div key={i} className="info-item" style={{ padding: '0.75rem', border: '1px solid #fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                             <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Sold: {p.totalSold} qty</div>
+                             </div>
+                             <ArrowUpRight size={18} color="#10b981" style={{ flexShrink: 0 }} />
+                           </div>
+                         ))}
+                         {!stats?.fastMoving?.length && <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>No sales data yet.</p>}
+                      </div>
+                    </div>
+
+                    <div style={{ background: '#fff1f2', padding: '1.25rem', borderRadius: '16px', border: '1px solid #fecaca' }}>
+                      <h5 style={{ fontSize: '0.875rem', marginBottom: '1rem', color: '#e11d48', display: 'flex', alignItems: 'center', gap: '6px' }}><TrendingDown size={16}/> Lowest Movement</h5>
+                      <div className="info-list">
+                         {stats?.slowMoving?.map((p, i) => (
+                           <div key={i} className="info-item" style={{ padding: '0.75rem', background: 'white', border: '1px solid #fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                             <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Stock: {p.quantity || 0}</div>
+                             </div>
+                             <ArrowDownRight size={18} color="#e11d48" style={{ flexShrink: 0 }} />
+                           </div>
+                         ))}
+                         {!stats?.slowMoving?.length && <p style={{ fontSize: '0.8rem', color: '#fca5a5' }}>No inventory loaded.</p>}
+                      </div>
+                    </div>
+
                   </div>
                 </div>
 
-                {/* 8. Inventory Movement */}
-                <div className="analytics-card">
-                  <h4><History size={18} color="#6366f1" /> {textData.managerDashboard.analytics.stockTrends}</h4>
-                  <div className="chart-container">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={stats?.movementTrends}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                        <XAxis dataKey="date" axisLine={false} tickLine={false} style={{ fontSize: 10 }} />
-                        <YAxis axisLine={false} tickLine={false} style={{ fontSize: 10 }} />
-                        <Tooltip />
-                        <Legend />
-                        <Area type="monotone" dataKey="added" stackId="1" stroke="#10b981" fill="#d1fae5" name="Stock Added" />
-                        <Area type="monotone" dataKey="removed" stackId="1" stroke="#ef4444" fill="#fee2e2" name="Stock Removed" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
               </div>
 
-              {/* Recent Activity Section */}
-              <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3>{textData.managerDashboard.activity.title}</h3>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                  <div className="search-container">
-                    <Search size={18} className="search-icon" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                    <input
-                      type="text"
-                      placeholder={textData.managerDashboard.activity.searchPlaceholder}
-                      className="search-input"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+              {/* Recent Activity Table */}
+              <div className="analytics-card" style={{ marginTop: '2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '10px' }}>
+                  <h4 style={{ margin: 0 }}><History size={20} color="#ec4899" /> Recent Activity</h4>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <select
+                      style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px' }}
+                      value={filterReason}
+                      onChange={e => setFilterReason(e.target.value)}
+                    >
+                      <option value="All">All Actions</option>
+                      <option value="Sale">Sale</option>
+                      <option value="Restock">Restock</option>
+                      <option value="Damage">Damage</option>
+                      <option value="Return">Return</option>
+                    </select>
+                    <div style={{ position: 'relative' }}>
+                      <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                      <input
+                        placeholder="Search Activity..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        style={{ padding: '6px 12px 6px 30px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', width: '160px' }}
+                      />
+                    </div>
                   </div>
-                  <select
-                    className="filter-select"
-                    value={filterReason}
-                    onChange={(e) => setFilterReason(e.target.value)}
-                    style={{ padding: '0.5rem', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none' }}
-                  >
-                    <option value="All">{textData.managerDashboard.activity.filterAll}</option>
-                    <option value="Sale">{textData.managerDashboard.activity.filterSales}</option>
-                    <option value="Restock">{textData.managerDashboard.activity.filterRestocks}</option>
-                    <option value="Damage">{textData.managerDashboard.activity.filterDamage}</option>
-                    <option value="Deleted">{textData.managerDashboard.activity.filterDeletions}</option>
-                  </select>
                 </div>
-              </div>
 
-              <div className="table-card">
-                <div className="scrollable-table">
-                  <table className="modern-table">
-                    <thead>
+                <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <table style={{ minWidth: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+                    <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: 600 }}>
                       <tr>
-                        <th>{textData.common.productName}</th>
-                        <th>{textData.common.category}</th>
-                        <th>{textData.common.quantity}</th>
-                        <th>{textData.common.status}</th>
-                        <th>{textData.common.date} & {textData.common.time}</th>
+                        <th style={{ padding: '12px 16px' }}>Product</th>
+                        <th style={{ padding: '12px 16px' }}>Action</th>
+                        <th style={{ padding: '12px 16px' }}>Quantity</th>
+                        <th style={{ padding: '12px 16px' }}>Date</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredMovements.slice(0, 10).map((log, i) => (
-                        <tr key={i}>
-                          <td style={{ fontWeight: 600, color: '#1e293b' }}>
-                            {log.product?.name || log.productName || (log.reason?.startsWith('Deleted: ') ? log.reason.split('Deleted: ')[1] : 'Item Removed')}
+                      {filteredMovements.length === 0 ? (
+                        <tr>
+                          <td colSpan="4" style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>
+                            No recent activity found.
                           </td>
-                          <td>{log.product?.category?.name || log.categoryName || 'N/A'}</td>
-                          <td>{log.quantityMoved || 0} {log.product?.unitType || 'pcs'}</td>
-                          <td>
-                            <span className={`status-badge status-${log.reason?.replace(/\s/g, '').toLowerCase()}`}>
-                              {log.reason?.includes('Deleted') ? <TrendingDown size={14} /> : (['Sale', 'Damage'].includes(log.reason) ? <TrendingDown size={14} /> : <TrendingUp size={14} />)}
-                              {log.reason}
-                            </span>
-                          </td>
-                          <td>{new Date(log.createdAt).toLocaleString()}</td>
                         </tr>
-                      ))}
-                      {filteredMovements.length === 0 && (
-                        <tr><td colSpan="5" style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>{textData.managerDashboard.activity.noMovements}</td></tr>
+                      ) : (
+                        filteredMovements.slice(0, 10).map((m, index) => (
+                          <tr key={m._id || index} style={{ borderBottom: '1px solid #e2e8f0', transition: 'background 0.2s', cursor: 'default' }} onMouseOver={e => e.currentTarget.style.background = '#f8fafc'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                            <td style={{ padding: '12px 16px', fontWeight: 500, color: '#1e293b' }}>
+                              {m.product?.name || m.productName || (m.reason?.startsWith('Deleted: ') ? 'Deleted Item' : 'Unknown')}
+                              {m.product?.category?.name && <span style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', fontWeight: 400 }}>{m.product.category.name}</span>}
+                            </td>
+                            <td style={{ padding: '12px 16px' }}>
+                              <span style={{ 
+                                padding: '4px 8px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600,
+                                background: m.reason.includes('Sale') ? '#d1fae5' : m.reason.includes('Damage') || m.reason.includes('Deleted') ? '#fee2e2' : '#e0e7ff',
+                                color: m.reason.includes('Sale') ? '#059669' : m.reason.includes('Damage') || m.reason.includes('Deleted') ? '#dc2626' : '#4338ca' 
+                              }}>
+                                {m.reason}
+                              </span>
+                            </td>
+                            <td style={{ padding: '12px 16px', color: '#334155', fontWeight: 600 }}>
+                              {m.reason.includes('Sale') || m.reason.includes('Damage') || m.reason.includes('Deleted') ? '-' : '+'}{m.quantityMoved || 0}
+                            </td>
+                            <td style={{ padding: '12px 16px', color: '#64748b' }}>
+                              {new Date(m.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </td>
+                          </tr>
+                        ))
                       )}
                     </tbody>
                   </table>
                 </div>
               </div>
+
             </div>
           )}
 

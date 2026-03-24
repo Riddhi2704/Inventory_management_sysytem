@@ -19,7 +19,7 @@ export default function UserManagement() {
                 headers: { Authorization: `Bearer ${user.token}` }
             });
             setUsers(res.data);
-            
+
             const shopsRes = await axios.get('http://localhost:5001/api/admin/shops', {
                 headers: { Authorization: `Bearer ${user.token}` }
             });
@@ -68,8 +68,8 @@ export default function UserManagement() {
         }
     };
 
-    const filteredUsers = users.filter(u => 
-        u.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const filteredUsers = users.filter(u =>
+        u.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -83,9 +83,9 @@ export default function UserManagement() {
             <div className="ap-filter-bar">
                 <div className="ap-search-wrap" style={{ flex: 1, maxWidth: '400px' }}>
                     <Search className="ap-search-icon" size={16} />
-                    <input 
-                        className="ap-search-input" 
-                        placeholder="Search users..." 
+                    <input
+                        className="ap-search-input"
+                        placeholder="Search users..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                     />
@@ -161,23 +161,23 @@ export default function UserManagement() {
                             <div className="ap-modal-body ap-form-grid">
                                 <div className="ap-form-group full">
                                     <label className="ap-label">Full Name</label>
-                                    <input className="ap-input" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} required />
+                                    <input className="ap-input" value={formData.fullName} onChange={e => setFormData({ ...formData, fullName: e.target.value })} required />
                                 </div>
                                 <div className="ap-form-group">
                                     <label className="ap-label">Email</label>
-                                    <input className="ap-input" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required />
+                                    <input className="ap-input" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required />
                                 </div>
                                 <div className="ap-form-group">
                                     <label className="ap-label">Role</label>
-                                    <select className="ap-select" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
-                                        <option value="Admin">Admin</option>
+                                    <select className="ap-select" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
+                                        {/* <option value="Admin">Admin</option> */}
                                         <option value="Manager">Manager</option>
                                         <option value="Staff">Staff</option>
                                     </select>
                                 </div>
                                 <div className="ap-form-group">
                                     <label className="ap-label">Shop Name (for Managers/Staff)</label>
-                                    <input className="ap-input" list="existing-shops" value={formData.shopName} onChange={e => setFormData({...formData, shopName: e.target.value})} placeholder="Select or type new..." />
+                                    <input className="ap-input" list="existing-shops" value={formData.shopName} onChange={e => setFormData({ ...formData, shopName: e.target.value })} placeholder="Select or type new..." />
                                     <datalist id="existing-shops">
                                         {shopList.map((shop, i) => (
                                             <option key={i} value={shop} />
@@ -186,7 +186,7 @@ export default function UserManagement() {
                                 </div>
                                 <div className="ap-form-group">
                                     <label className="ap-label">Password {editingUser && '(Leave blank to keep current)'}</label>
-                                    <input className="ap-input" type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required={!editingUser} />
+                                    <input className="ap-input" type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} required={!editingUser} />
                                 </div>
                             </div>
                             <div className="ap-modal-footer">

@@ -15,10 +15,24 @@ const registerUser = async (req, res) => {
   try {
     const { 
       fullName, gender, dob, mobileNumber, email, address, city, state, pincode, password, role, shopName,
-      adminId, adminEducation,
+      adminId, adminEducation, adminCode,
       managerId, department, education, experienceYears,
       staffId, shiftTime
     } = req.body;
+
+    // --- ADMIN SECURITY VALIDATION ---
+    if (role === 'Admin') {
+      // 1. Validate Secret Code
+      if (adminCode !== process.env.ADMIN_SECRET_CODE) {
+        return res.status(403).json({ message: 'Access Denied: Invalid Admin Secret Code provided.' });
+      }
+      // 2. Strict One-Admin Limitation
+      const existingAdmin = await User.findOne({ role: 'Admin' });
+      if (existingAdmin) {
+        return res.status(403).json({ message: 'Registration Failed: An Admin account already operates this system.' });
+      }
+    }
+    // ---------------------------------
 
     const userExists = await User.findOne({ email: { $regex: new RegExp(`^${email}$`, 'i') } });
     if (userExists) {

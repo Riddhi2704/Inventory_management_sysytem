@@ -12,7 +12,7 @@ export default function Register() {
     address: '', city: '', state: '', pincode: '', password: '', confirmPassword: '',
     profilePhoto: '', shopName: '',
     // Admin specific
-    adminId: '', adminEducation: '', adminJoiningDate: '',
+    adminId: '', adminEducation: '', adminJoiningDate: '', adminCode: '',
     // Manager specific
     managerId: '', department: 'Inventory Management', managerEducation: '', experienceYears: '', managerJoiningDate: '',
     // Staff specific
@@ -53,6 +53,10 @@ export default function Register() {
       return setError('Passwords do not match');
     }
 
+    if (!/^\d{10}$/.test(formData.mobileNumber)) {
+      return setError('Mobile number must be exactly 10 digits');
+    }
+
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!passwordRegex.test(formData.password)) {
       return setError('Password must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one number, and one special character (e.g., @, $, %, &, !, *, ?).');
@@ -67,6 +71,7 @@ export default function Register() {
         delete dataToSubmit.adminId;
         delete dataToSubmit.adminEducation;
         delete dataToSubmit.adminJoiningDate;
+        delete dataToSubmit.adminCode;
       }
       if (role !== 'Manager') {
         delete dataToSubmit.managerId;
@@ -210,6 +215,11 @@ export default function Register() {
           <div className="form-row">
             {role === 'Admin' && (
               <>
+                <div className="form-group full-width" style={{ background: '#fef2f2', padding: '15px', borderRadius: '8px', border: '1px solid #fecaca', marginBottom: '10px' }}>
+                  <label style={{ color: '#991b1b', fontWeight: 'bold' }}>Admin Secret Validation Code *</label>
+                  <input required type="password" name="adminCode" value={formData.adminCode} onChange={handleChange} className="input-field" placeholder="Enter secure initialization code" style={{ border: '1px solid #fca5a5' }} />
+                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#b91c1c' }}>This code is required to authorize the creation of an Administrator.</p>
+                </div>
                 <div className="form-group">
                   <label>{textData.register.adminFields.id}</label>
                   <input readOnly name="adminId" value={formData.adminId} className="input-field" disabled />
