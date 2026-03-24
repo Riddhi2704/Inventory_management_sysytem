@@ -14,7 +14,10 @@ export const AuthProvider = ({ children }) => {
     const interceptorId = axios.interceptors.response.use(
       (response) => response,
       (error) => {
-        if (error.response?.status === 401) {
+        const isLoginRequest = error.config?.url?.includes('/auth/login');
+        const isLoginPage = window.location.pathname === '/login';
+        
+        if (error.response?.status === 401 && !isLoginRequest && !isLoginPage) {
           console.warn('[AuthContext] 401 Unauthorized – clearing session and redirecting to login.');
           setUser(null);
           localStorage.removeItem('user');
@@ -29,9 +32,22 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // Check local storage for token on mount
     const checkUserLoggedIn = async () => {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+      try {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          // Ensure token exists, otherwise it's a malformed session
+          if (parsedUser && parsedUser.token) {
+            setUser(parsedUser);
+          } else {
+            console.warn('[AuthContext] Malformed user object in storage (missing token). Clearing session.');
+            localStorage.removeItem('user');
+            setUser(null);
+          }
+        }
+      } catch (err) {
+        console.error('[AuthContext] Error parsing stored user:', err);
+        localStorage.removeItem('user');
       }
       setLoading(false);
     };

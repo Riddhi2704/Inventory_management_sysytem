@@ -173,7 +173,7 @@ export default function MovementTracker({ prefillProduct }) {
                     >
                       <div>
                         <div style={{ fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          {p.name}
+                          {p.name} {p.brand ? <span style={{ fontWeight: 'normal', fontSize: '0.85em', color: 'var(--sd-text-muted)' }}>({p.brand})</span> : ''}
                           <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: p.status === 'Active' ? '#dcfce7' : '#fef9c3', color: p.status === 'Active' ? '#166534' : '#854d0e', fontWeight: '700', textTransform: 'uppercase' }}>
                             {p.status}
                           </span>
@@ -197,7 +197,7 @@ export default function MovementTracker({ prefillProduct }) {
 
           {selectedProduct ? (
             <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '1.25rem' }}>
-              <h3 style={{ fontWeight: '700', fontSize: '1.125rem', color: '#1e3a8a', margin: '0 0 0.25rem 0' }}>{selectedProduct.name}</h3>
+              <h3 style={{ fontWeight: '700', fontSize: '1.125rem', color: '#1e3a8a', margin: '0 0 0.25rem 0' }}>{selectedProduct.name} {selectedProduct.brand ? `(${selectedProduct.brand})` : ''}</h3>
               <p style={{ fontFamily: 'monospace', color: '#2563eb', fontSize: '0.875rem', margin: '0 0 1rem 0' }}>SKU: {selectedProduct.productId}</p>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>

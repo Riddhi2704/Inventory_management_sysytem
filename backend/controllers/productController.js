@@ -46,6 +46,20 @@ const addProduct = async (req, res) => {
       status = 'Active'; // Assume Managers/Admins can add directly as Active (optional, but standard)
     }
 
+    // Check for duplicate product (same name and brand, case-insensitive, trimmed)
+    const trimmedName = name?.trim();
+    const trimmedBrand = brand ? brand.trim() : '';
+
+    const existingProduct = await Product.findOne({
+      name: { $regex: new RegExp(`^${trimmedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      brand: { $regex: new RegExp(`^${trimmedBrand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      shopName: { $regex: new RegExp(`^${shopName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+    });
+
+    if (existingProduct) {
+      return res.status(400).json({ message: 'Product already exists with this brand' });
+    }
+
     const product = await Product.create({
       productId, name, category: finalCategoryId, brand, supplier: finalSupplierId, purchasePrice, sellingPrice, quantity, unitType, description, storageLocation, productImage,
       shopName,
@@ -86,6 +100,38 @@ const updateProduct = async (req, res) => {
       finalCategoryId = existingCategory._id;
     }
 
+    // Check for duplicate product (same name and brand, case-insensitive, trimmed)
+    if (name !== undefined || brand !== undefined) {
+      const newName = (name !== undefined ? name : product.name).trim();
+      const newBrand = (brand !== undefined ? brand : product.brand || '').trim();
+
+      console.log(`[updateProduct] Checking duplicate for: Name=[${newName}], Brand=[${newBrand}], Shop=[${shopName}]`);
+
+      const duplicateQuery = {
+        _id: { $ne: req.params.id }, // Exclude current product
+        name: { $regex: new RegExp(`^${newName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+        shopName: shopNameRegex
+      };
+
+      if (newBrand) {
+        duplicateQuery.brand = { $regex: new RegExp(`^${newBrand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') };
+      } else {
+        // Match if brand is empty, null, or missing
+        duplicateQuery.$or = [
+          { brand: { $exists: false } },
+          { brand: null },
+          { brand: "" }
+        ];
+      }
+
+      const existingProduct = await Product.findOne(duplicateQuery);
+
+      if (existingProduct) {
+        console.log(`[updateProduct] Found duplicate product: ${existingProduct._id}`);
+        return res.status(400).json({ message: 'Product already exists with this brand' });
+      }
+    }
+
     if (name !== undefined) product.name = name;
     if (brand !== undefined) product.brand = brand;
     if (quantity !== undefined) product.quantity = Number(quantity);
@@ -119,7 +165,7 @@ const updateProduct = async (req, res) => {
 const getProducts = async (req, res) => {
   try {
     const shopName = req.user.shopName?.trim();
-    if (!shopName) {
+    if (!shopName && req.user.role !== 'Admin') {
       return res.status(400).json({ message: 'User does not belong to a shop' });
     }
     const { search, category, status, lowStock } = req.query;
@@ -127,9 +173,11 @@ const getProducts = async (req, res) => {
     console.log(`[getProducts] Query Params: ${JSON.stringify(req.query)}`);
     
     // Use a more relaxed filter first to diagnose
-    const safeShopName = shopName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
-    const shopFilter = { shopName: { $regex: new RegExp(`^${safeShopName}$`, 'i') } };
-    let query = { ...shopFilter };
+    let query = {};
+    if (req.user.role !== 'Admin') {
+      const safeShopName = shopName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+      query.shopName = { $regex: new RegExp(`^${safeShopName}$`, 'i') };
+    }
     console.log('[getProducts] Constructed base query:', JSON.stringify(query));
     
     if (search) {
@@ -171,6 +219,60 @@ const getProducts = async (req, res) => {
     const skip = (page - 1) * limit;
 
     console.log('[getProducts] Final query before execution:', JSON.stringify(query));
+
+    // Support unique products by name and brand if requested
+    if (req.query.unique === 'true') {
+      const pipeline = [
+        { $match: query },
+        { $sort: { createdAt: -1 } }, // Pick newest first
+        { 
+          $group: {
+            _id: { name: "$name", brand: "$brand", shopName: "$shopName" },
+            doc: { $first: "$$ROOT" }
+          }
+        },
+        { $replaceRoot: { newRoot: "$doc" } },
+        { $sort: { createdAt: -1 } }
+      ];
+
+      // Handle pagination within aggregation
+      const pageNum = parseInt(req.query.page) || 1;
+      const limitNum = parseInt(req.query.limit) || 1000;
+      const skipAmount = (pageNum - 1) * limitNum;
+
+      const results = await Product.aggregate([
+        ...pipeline,
+        {
+          $facet: {
+            metadata: [{ $count: "total" }],
+            data: [{ $skip: skipAmount }, { $limit: limitNum }]
+          }
+        }
+      ]);
+
+      const products = results[0].data;
+      const total = results[0].metadata[0]?.total || 0;
+
+      // Populate manually since aggregate doesn't support .populate()
+      const populatedProducts = await Product.populate(products, [
+        { path: 'category', select: 'name' },
+        { path: 'supplier', select: 'name' },
+        { path: 'addedBy', select: 'fullName' }
+      ]);
+
+      if (req.query.paginate === 'true') {
+        return res.json({
+          products: populatedProducts,
+          pagination: {
+            total,
+            page: parseInt(req.query.page) || 1,
+            limit: limitNum,
+            pages: Math.ceil(total / limitNum)
+          }
+        });
+      }
+      return res.json(populatedProducts);
+    }
 
     const total = await Product.countDocuments(query);
     console.log(`[getProducts] countDocuments complete: ${total}`);

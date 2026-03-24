@@ -13,7 +13,6 @@ export default function AddProductForm({ onSuccess }) {
   });
 
   const [categories, setCategories] = useState([]);
-  const [suppliers, setSuppliers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -21,15 +20,13 @@ export default function AddProductForm({ onSuccess }) {
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
-        const [catRes, supRes] = await Promise.all([
-          axios.get('http://localhost:5001/api/categories', { headers: { Authorization: `Bearer ${user.token}` } }),
-          axios.get('http://localhost:5001/api/suppliers', { headers: { Authorization: `Bearer ${user.token}` } })
-        ]);
+        const catRes = await axios.get('http://localhost:5001/api/categories', { 
+          headers: { Authorization: `Bearer ${user.token}` } 
+        });
 
         if (catRes.data) setCategories(catRes.data);
-        if (supRes.data) setSuppliers(supRes.data);
       } catch (err) {
-        console.error('Failed to fetch categories/suppliers', err);
+        console.error('Failed to fetch categories', err);
       }
     };
     if (user?.token) fetchDropdownData();
@@ -56,7 +53,11 @@ export default function AddProductForm({ onSuccess }) {
     setSuccess(false);
 
     try {
-      const payload = { ...formData };
+      const payload = { 
+        ...formData,
+        name: formData.name.trim(),
+        brand: formData.brand.trim()
+      };
 
       // Auto-generate a basic SKU if none provided
       payload.productId = `SKU-${Math.floor(Math.random() * 10000)}`;
@@ -119,10 +120,7 @@ export default function AddProductForm({ onSuccess }) {
 
           <div className="sd-form-group">
             <label className="sd-label">{textData.addProduct.form.supplier}</label>
-            <select required name="supplier" value={formData.supplier} onChange={handleChange} className="sd-select">
-              <option value="">{textData.addProduct.placeholders.supplier}</option>
-              {suppliers.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
-            </select>
+            <input required type="text" name="supplier" value={formData.supplier} onChange={handleChange} className="sd-input" placeholder={textData.addProduct.placeholders.supplier} />
           </div>
 
           <div className="sd-form-group">

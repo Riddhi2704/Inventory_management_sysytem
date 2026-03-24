@@ -9,13 +9,14 @@ import ResetPassword from './pages/ResetPassword';
 import ChangePassword from './pages/ChangePassword';
 
 import AdminDashboard from './pages/AdminDashboard';
+import AdminPanel from './pages/AdminPanel';
 import ManagerDashboard from './pages/ManagerDashboard';
 import StaffDashboard from './pages/StaffDashboard';
 
 // Route Guards
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user } = useAuth();
-  
+
   if (!user) return <Navigate to="/login" replace />;
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to="/unauthorized" replace />;
@@ -27,11 +28,11 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 const RoleBasedRedirect = () => {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  
+
   if (user.role === 'Admin') return <Navigate to="/admin" replace />;
   if (user.role === 'Manager') return <Navigate to="/manager" replace />;
   if (user.role === 'Staff') return <Navigate to="/staff" replace />;
-  
+
   return <Navigate to="/login" replace />;
 };
 
@@ -47,19 +48,25 @@ function AppRoutes() {
           <ChangePassword />
         </ProtectedRoute>
       } />
-      
+
       <Route path="/admin/*" element={
         <ProtectedRoute allowedRoles={['Admin']}>
-          <AdminDashboard />
+          <AdminPanel />
         </ProtectedRoute>
       } />
-      
+
+      <Route path="/admin-panel" element={
+        <ProtectedRoute allowedRoles={['Admin']}>
+          <AdminPanel />
+        </ProtectedRoute>
+      } />
+
       <Route path="/manager/*" element={
         <ProtectedRoute allowedRoles={['Manager']}>
           <ManagerDashboard />
         </ProtectedRoute>
       } />
-      
+
       <Route path="/staff/*" element={
         <ProtectedRoute allowedRoles={['Staff']}>
           <StaffDashboard />

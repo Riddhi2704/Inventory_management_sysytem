@@ -1,225 +1,264 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { Loader2, TrendingUp, Package, Tag, Layers } from 'lucide-react';
+import { Search, Moon, Sun } from 'lucide-react';
+
+import './AdminCharts.css';
+import RevenueChart from './admin/charts/RevenueChart';
+import OrdersChart from './admin/charts/OrdersChart';
+import InventoryChart from './admin/charts/InventoryChart';
+import TopProductsChart from './admin/charts/TopProductsChart';
 
 export default function AdminCharts() {
   const { user } = useAuth();
-  const [data, setData] = useState(null);
+  
   const [loading, setLoading] = useState(true);
+  const [timeFilter, setTimeFilter] = useState('Monthly');
+  const [categoryFilter, setCategoryFilter] = useState('All Categories');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [theme, setTheme] = useState('light');
 
-  const DONUT_COLORS = ['#3B82F6', '#E2E8F0']; // Blue and light gray for the gauge
+  const [rawProducts, setRawProducts] = useState([]);
+  const [rawLogs, setRawLogs] = useState([]);
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
-    const fetchChartData = async () => {
+    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (isDark) setTheme('dark');
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
+  // 1. Fetch data ONCE on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
       try {
-        const [productsRes, logsRes] = await Promise.all([
-          axios.get('http://localhost:5001/api/products', { headers: { Authorization: `Bearer ${user.token}` } }),
-          axios.get('http://localhost:5001/api/logs/movement', { headers: { Authorization: `Bearer ${user.token}` } })
+        const [productsRes, logsRes, catRes] = await Promise.all([
+          axios.get('http://localhost:5001/api/products', { headers: { Authorization: `Bearer ${user?.token}` } }),
+          axios.get('http://localhost:5001/api/logs/movement', { headers: { Authorization: `Bearer ${user?.token}` } }),
+          axios.get('http://localhost:5001/api/categories', { headers: { Authorization: `Bearer ${user?.token}` } })
         ]);
-
-        const products = productsRes.data;
-        const logs = logsRes.data;
-
-        // 1. Movement Volume (Bar Chart - In vs Out)
-        const trendMap = {};
-        const today = new Date();
-        for (let i = 6; i >= 0; i--) {
-          const d = new Date(today);
-          d.setDate(d.getDate() - i);
-          trendMap[d.toISOString().split('T')[0]] = { in: 0, out: 0 };
-        }
-
-        logs.forEach(log => {
-          const dateStr = new Date(log.createdAt).toISOString().split('T')[0];
-          if (trendMap[dateStr]) {
-             if (['Restock', 'Found', 'Return'].includes(log.reason)) {
-                 trendMap[dateStr].in += log.quantityMoved;
-             } else {
-                 trendMap[dateStr].out += log.quantityMoved;
-             }
-          }
-        });
-        const movementData = Object.keys(trendMap).map(k => ({
-          name: new Date(k).toLocaleDateString('en-US', { weekday: 'short' }),
-          stockIn: trendMap[k].in,
-          stockOut: trendMap[k].out
-        }));
-
-        // 2. Promotional Sales (Turned into System Health Donut)
-        const healthyProducts = products.filter(p => p.quantity > p.minStockLevel).length;
-        const lowProducts = products.length - healthyProducts;
-        
-        const healthData = [
-          { name: 'Healthy Stock', value: healthyProducts },
-          { name: 'Low/Out of Stock', value: lowProducts }
-        ];
-
-        // 3. Top Products (List)
-        // Sort products by quantity (just as a placeholder for "Top Sales")
-        const topProductsList = [...products]
-           .filter(p => p.status === 'Active')
-           .sort((a, b) => b.quantity - a.quantity)
-           .slice(0, 4);
-
-        setData({ movementData, healthData, topProductsList });
+        setRawProducts(productsRes.data);
+        setRawLogs(logsRes.data);
+        setCategories(catRes.data);
       } catch (err) {
         console.error("Failed to load chart data", err);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchChartData();
-  }, [user.token]);
-
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center p-12 h-64 text-slate-400 bg-white rounded-2xl shadow-sm border border-slate-100">
-        <Loader2 className="animate-spin h-8 w-8 mb-4 border-slate-200 border-t-[#F97316]" />
-        <p>Crunching numbers...</p>
-      </div>
-    );
-  }
-
-  if (!data) return null;
-
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white/95 backdrop-blur-sm border border-slate-100 p-3 rounded-lg shadow-xl">
-          <p className="font-bold text-slate-800 mb-2">{label}</p>
-          {payload.map((entry, index) => (
-             <p key={index} className="text-sm font-medium flex items-center gap-2" style={{ color: entry.color }}>
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }}></span>
-                {entry.name}: {entry.value}
-             </p>
-          ))}
-        </div>
-      );
+    if (user?.token) {
+        fetchData();
     }
-    return null;
-  };
+  }, [user]);
+
+  // 2. Filter products based on search query and category
+  const filteredProducts = useMemo(() => {
+    let fp = rawProducts;
+    if (categoryFilter !== 'All Categories') {
+       fp = fp.filter(p => {
+          const catId = p.category?._id || p.category;
+          return String(catId) === String(categoryFilter);
+       });
+    }
+    if (searchQuery) {
+       fp = fp.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    }
+    return fp;
+  }, [rawProducts, categoryFilter, searchQuery]);
+
+  // 3. Autocomplete suggestions (ignores category filter so they can search anything, but follows current query)
+  const searchSuggestions = useMemo(() => {
+     if (!searchQuery) return [];
+     return rawProducts.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 5);
+  }, [rawProducts, searchQuery]);
+
+  // 4. Derive graph data
+  const { revenueData, ordersData, inventoryData, topProductsData } = useMemo(() => {
+    // Inventory
+    let inStock = 0, lowStock = 0, outOfStock = 0;
+    filteredProducts.forEach(p => {
+        if (p.quantity === 0) outOfStock++;
+        else if (p.quantity <= (p.minStockLevel || 5)) lowStock++;
+        else inStock++;
+    });
+    const invData = [
+      { name: 'In Stock', value: inStock },
+      { name: 'Low Stock', value: lowStock },
+      { name: 'Out of Stock', value: outOfStock }
+    ];
+
+    // Top Products
+    const topData = [...filteredProducts]
+        .filter(p => p.status === 'Active')
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 5)
+        .map(p => ({
+            name: p.name,
+            sales: p.quantity * 2,
+            price: p.purchasePrice || p.sellingPrice || p.price || 0
+        }));
+
+    // Filter Logs (must relate to filteredProducts)
+    const validProductIds = new Set(filteredProducts.map(p => String(p._id)));
+    const filteredLogs = rawLogs.filter(log => {
+      const pId = log.product?._id || log.product || log.productId;
+      return validProductIds.has(String(pId));
+    });
+
+    // Revenue & Orders
+    const trendMap = {};
+    const today = new Date();
+
+    if (timeFilter === 'Daily') {
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            const dateKey = d.toISOString().split('T')[0];
+            trendMap[dateKey] = { date: d.toLocaleDateString('en-US', { weekday: 'short' }), revenue: 0, orders: 0 };
+        }
+    } else if (timeFilter === 'Weekly') {
+        for (let i = 3; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - (i * 7));
+            const weekStart = new Date(d);
+            weekStart.setDate(d.getDate() - d.getDay()); // Sunday
+            const dateKey = weekStart.toISOString().split('T')[0];
+            trendMap[dateKey] = { date: `Wk of ${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`, revenue: 0, orders: 0 };
+        }
+    } else if (timeFilter === 'Monthly') {
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+            const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            trendMap[dateKey] = { date: d.toLocaleDateString('en-US', { month: 'short' }), revenue: 0, orders: 0 };
+        }
+    } else if (timeFilter === 'Yearly') {
+        for (let i = 2; i >= 0; i--) {
+            const year = today.getFullYear() - i;
+            const dateKey = `${year}`;
+            trendMap[dateKey] = { date: dateKey, revenue: 0, orders: 0 };
+        }
+    }
+
+    filteredLogs.forEach(log => {
+        const logDate = new Date(log.createdAt);
+        let dateKey = '';
+        
+        if (timeFilter === 'Daily') {
+            dateKey = logDate.toISOString().split('T')[0];
+        } else if (timeFilter === 'Weekly') {
+            const weekStart = new Date(logDate);
+            weekStart.setDate(logDate.getDate() - logDate.getDay());
+            dateKey = weekStart.toISOString().split('T')[0];
+        } else if (timeFilter === 'Monthly') {
+            dateKey = `${logDate.getFullYear()}-${String(logDate.getMonth() + 1).padStart(2, '0')}`;
+        } else if (timeFilter === 'Yearly') {
+            dateKey = `${logDate.getFullYear()}`;
+        }
+
+        if (trendMap[dateKey]) {
+            if (log.reason && log.reason.toLowerCase().includes('sale')) {
+                trendMap[dateKey].orders += log.quantityMoved;
+                const pId = log.product?._id || log.product || log.productId;
+                const relProduct = filteredProducts.find(p => String(p._id) === String(pId));
+                const price = relProduct ? (relProduct.sellingPrice || relProduct.purchasePrice || 10) : 10;
+                trendMap[dateKey].revenue += log.quantityMoved * price;
+            }
+        }
+    });
+
+    const sortedKeys = Object.keys(trendMap).sort((a, b) => a.localeCompare(b));
+    const rData = sortedKeys.map(k => ({ date: trendMap[k].date, revenue: trendMap[k].revenue }));
+    const oData = sortedKeys.map(k => ({ date: trendMap[k].date, orders: trendMap[k].orders }));
+
+    return { revenueData: rData, ordersData: oData, inventoryData: invData, topProductsData: topData };
+  }, [filteredProducts, rawLogs, timeFilter]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in">
-      
-      {/* Huge Bar Chart (Revenue equivalent) */}
-      <div className="lg:col-span-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-100/60 flex flex-col h-[400px]">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-slate-800 font-bold text-lg">Revenue</h3>
-          <button className="text-xs font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200/60 hover:bg-slate-100 transition-colors flex items-center gap-1">Yearly <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L5 5L9 1" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
-        </div>
-        
-        <div className="flex items-center gap-6 mb-6">
-           <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-[#F97316]"></div>
-              <div>
-                <span className="text-xs text-slate-500 font-semibold tracking-wide uppercase">Revenue</span>
-                <div className="text-xl font-extrabold flex items-center gap-2 text-slate-800">
-                  $37,802 <span className="text-emerald-500 text-xs flex items-center"><TrendingUp size={12}/> 0.56%</span>
-                </div>
-              </div>
-           </div>
-           <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-[#8B5CF6]"></div>
-              <div>
-                <span className="text-xs text-slate-500 font-semibold tracking-wide uppercase">Order</span>
-                <div className="text-xl font-extrabold flex items-center gap-2 text-slate-800">
-                  28,305 <span className="text-emerald-500 text-xs flex items-center"><TrendingUp size={12}/> 0.56%</span>
-                </div>
-              </div>
-           </div>
-        </div>
-
-        <div className="flex-1 w-full relative">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data.movementData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }} barGap={8}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} dy={10} />
-              <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-              <Tooltip cursor={{fill: '#f8fafc'}} content={<CustomTooltip />} />
-              <Bar dataKey="stockIn" name="Revenue" fill="#F97316" radius={[4, 4, 4, 4]} barSize={12} />
-              <Bar dataKey="stockOut" name="Orders" fill="#8B5CF6" radius={[4, 4, 4, 4]} barSize={12} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Donut Chart (Promotional Sales equivalent) */}
-      <div className="lg:col-span-3 bg-white p-6 rounded-2xl shadow-sm border border-slate-100/60 flex flex-col h-[400px]">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-slate-800 font-bold text-lg">Promotional Sales</h3>
-          <button className="text-xs font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200/60 hover:bg-slate-100 transition-colors flex items-center gap-1">Weekly <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L5 5L9 1" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
-        </div>
-
-        <div className="text-left mb-2">
-             <span className="text-xs text-slate-500 font-semibold tracking-wide uppercase">Visitors</span>
-             <div className="text-3xl font-extrabold text-slate-800 flex items-center justify-start gap-2">
-               7,802 <span className="text-emerald-500 text-sm flex items-center"><TrendingUp size={14}/> 0.56%</span>
-             </div>
-        </div>
-        
-        <div className="flex-1 w-full relative flex items-center justify-center -mt-4">
-           <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data.healthData}
-                cx="50%"
-                cy="70%"
-                startAngle={180}
-                endAngle={0}
-                innerRadius={70}
-                outerRadius={100}
-                dataKey="value"
-                stroke="none"
-                cornerRadius={5}
-              >
-                {data.healthData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={DONUT_COLORS[index % DONUT_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="absolute top-[65%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center text-slate-800">
-            <span className="text-2xl font-black">Store</span>
+    <div className="ac-container">
+      <div className="ac-header">
+        <h2 className="ac-title">System Analytics</h2>
+        <div className="ac-controls">
+          
+          <div className="ac-search-wrapper" style={{ position: 'relative' }}>
+            <Search className="ac-search-icon" size={16} />
+            <input 
+              type="text" 
+              className="ac-search-input" 
+              placeholder="Search products..." 
+              value={searchQuery}
+              onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+            />
+            {showSuggestions && searchSuggestions.length > 0 && (
+              <ul style={{
+                 position: 'absolute', top: '100%', left: 0, width: '100%', backgroundColor: 'var(--ac-card-bg)', 
+                 border: '1px solid var(--ac-border)', borderRadius: 'var(--ac-radius-sm)', listStyle: 'none', 
+                 padding: 0, margin: '4px 0 0', zIndex: 10, boxShadow: 'var(--ac-card-shadow)' 
+              }}>
+                 {searchSuggestions.map(s => (
+                   <li 
+                      key={s._id} 
+                      style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '0.875rem', borderBottom: '1px solid var(--ac-border)', color: 'var(--ac-text-main)' }} 
+                      onClick={() => { setSearchQuery(s.name); setShowSuggestions(false); }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--ac-bg-main)'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                   >
+                     {s.name}
+                   </li>
+                 ))}
+              </ul>
+            )}
           </div>
+          
+          <select 
+            className="ac-select"
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+          >
+            <option value="All Categories">All Categories</option>
+            {categories.map(c => (
+                <option key={c._id} value={c._id}>{c.name}</option>
+            ))}
+          </select>
+          
+          <select 
+            className="ac-select"
+            value={timeFilter}
+            onChange={(e) => setTimeFilter(e.target.value)}
+          >
+            <option value="Daily">Daily</option>
+            <option value="Weekly">Weekly</option>
+            <option value="Monthly">Monthly</option>
+            <option value="Yearly">Yearly</option>
+          </select>
+
+          <button className="ac-theme-toggle" onClick={toggleTheme} title="Toggle Dark Mode">
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+          </button>
         </div>
       </div>
 
-      {/* Top Products List (Top Sale equivalent) */}
-      <div className="lg:col-span-3 bg-white p-6 rounded-2xl shadow-sm border border-slate-100/60 flex flex-col h-[400px]">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-slate-800 font-bold text-lg">Top sale</h3>
-          <button className="text-xs font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200/60 hover:bg-slate-100 transition-colors flex items-center gap-1">Weekly <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L5 5L9 1" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
-        </div>
+      <div className="ac-grid-top">
+        <RevenueChart data={revenueData} loading={loading} />
+        <OrdersChart data={ordersData} loading={loading} />
+      </div>
 
-        <div className="flex-1 overflow-y-auto pr-2 space-y-3">
-          {data.topProductsList.map((product, idx) => (
-            <div key={product._id} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors border border-slate-100/30">
-               <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-slate-100/50 overflow-hidden flex items-center justify-center border border-slate-100 shadow-sm text-slate-400 font-bold text-lg">
-                     {product.imageUrl ? <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover"/> : (idx % 2 === 0 ? <Package size={20} className="text-slate-400"/> : <Layers size={20} className="text-slate-400"/>)}
-                  </div>
-                  <div>
-                    <h4 className="font-extrabold text-slate-800 text-sm truncate max-w-[100px]" title={product.name}>{product.name}</h4>
-                    <p className="text-xs text-slate-500 font-medium">${product.purchasePrice?.toFixed(2) || '0.00'}</p>
-                  </div>
-               </div>
-               <div className="text-right">
-                 <h4 className="font-extrabold text-slate-800 text-sm">{product.quantity * 2}</h4>
-                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Sales</p>
-               </div>
-            </div>
-          ))}
-          {data.topProductsList.length === 0 && (
-            <div className="text-center text-slate-400 py-10 text-sm font-medium">
-              No product data available yet.
-            </div>
-          )}
-        </div>
+      <div className="ac-grid-bottom">
+        <InventoryChart data={inventoryData} loading={loading} />
+        <TopProductsChart data={topProductsData} loading={loading} />
       </div>
 
     </div>

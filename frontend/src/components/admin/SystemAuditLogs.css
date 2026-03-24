@@ -1,0 +1,398 @@
+/* SystemAuditLogs.css */
+
+:root {
+  --sal-bg: #F9FAFB;
+  --sal-card-bg: #ffffff;
+  --sal-text-main: #1F2937;
+  --sal-text-muted: #6b7280;
+  --sal-border: #e5e7eb;
+  
+  --sal-primary: #4f46e5;
+  --sal-primary-light: #e0e7ff;
+  --sal-success: #22c55e;
+  --sal-success-light: #dcfce7;
+  --sal-danger: #ef4444;
+  --sal-danger-light: #fee2e2;
+  --sal-warning: #f59e0b;
+  --sal-warning-light: #fef3c7;
+  
+  --sal-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --sal-radius: 16px;
+  --sal-font: 'Inter', 'Poppins', sans-serif;
+  --sal-transition: all 0.2s ease-in-out;
+}
+
+[data-theme="dark"] .sal-container {
+  /* Inherit existing dark mode palette if needed, otherwise fallback gracefully */
+  --sal-bg: #0f172a;
+  --sal-card-bg: #1e293b;
+  --sal-text-main: #f8fafc;
+  --sal-text-muted: #94a3b8;
+  --sal-border: #334155;
+  --sal-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  
+  --sal-primary-light: rgba(79, 70, 229, 0.15);
+  --sal-success-light: rgba(34, 197, 94, 0.15);
+  --sal-danger-light: rgba(239, 68, 68, 0.15);
+  --sal-warning-light: rgba(245, 158, 11, 0.15);
+}
+
+.sal-layout {
+  background-color: var(--sal-bg);
+  min-height: 100%;
+  padding: 24px;
+  font-family: var(--sal-font);
+  color: var(--sal-text-main);
+  animation: salFadeIn 0.4s ease-out;
+}
+
+@keyframes salFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Header */
+.sal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.sal-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.02em;
+}
+
+.sal-subtitle {
+  font-size: 0.875rem;
+  color: var(--sal-text-muted);
+  margin: 0;
+}
+
+.sal-filters {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.sal-input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.sal-input-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--sal-text-muted);
+}
+
+.sal-input, .sal-select {
+  padding: 10px 16px;
+  background-color: var(--sal-card-bg);
+  border: 1px solid var(--sal-border);
+  border-radius: 8px;
+  color: var(--sal-text-main);
+  font-size: 0.875rem;
+  font-family: inherit;
+  transition: var(--sal-transition);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.sal-input {
+  padding-left: 36px;
+  width: 260px;
+}
+
+.sal-input:focus, .sal-select:focus {
+  outline: none;
+  border-color: var(--sal-primary);
+  box-shadow: 0 0 0 3px var(--sal-primary-light);
+}
+
+/* Charts Area */
+.sal-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1024px) {
+  .sal-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sal-card {
+  background-color: var(--sal-card-bg);
+  border-radius: var(--sal-radius);
+  padding: 24px;
+  box-shadow: var(--sal-shadow);
+  border: 1px solid var(--sal-border);
+  transition: var(--sal-transition);
+}
+
+.sal-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+}
+
+.sal-card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  color: var(--sal-text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sal-chart-wrapper {
+  height: 250px;
+  width: 100%;
+}
+
+/* Table Area */
+.sal-table-container {
+  background-color: var(--sal-card-bg);
+  border-radius: var(--sal-radius);
+  box-shadow: var(--sal-shadow);
+  border: 1px solid var(--sal-border);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.sal-table-scroll {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+/* Custom Scrollbar */
+.sal-table-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.sal-table-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sal-table-scroll::-webkit-scrollbar-thumb {
+  background: var(--sal-border);
+  border-radius: 4px;
+}
+.sal-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--sal-text-muted);
+}
+
+.sal-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.sal-table th {
+  position: sticky;
+  top: 0;
+  background-color: var(--sal-bg);
+  color: var(--sal-text-muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--sal-border);
+  z-index: 10;
+}
+
+.sal-th-sortable {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.sal-th-sortable:hover {
+  color: var(--sal-text-main);
+}
+
+.sal-table td {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--sal-border);
+  font-size: 0.875rem;
+  color: var(--sal-text-main);
+  transition: background-color 0.15s;
+}
+
+.sal-table tbody tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, 0.015);
+}
+[data-theme="dark"] .sal-table tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.sal-table tbody tr:hover td {
+  background-color: rgba(79, 70, 229, 0.04);
+}
+[data-theme="dark"] .sal-table tbody tr:hover td {
+  background-color: rgba(79, 70, 229, 0.08);
+}
+
+.sal-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Typography styles for table cells */
+.sal-cell-time {
+  color: var(--sal-text-muted);
+  font-size: 0.8125rem;
+}
+
+.sal-cell-product {
+  font-weight: 600;
+  color: var(--sal-primary);
+}
+
+.sal-cell-qty {
+  font-weight: 700;
+  font-size: 0.9375rem;
+}
+
+.sal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Quantity Pill */
+.sal-qty-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  background-color: var(--sal-primary-light);
+  color: var(--sal-primary);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* Action Badges */
+.sal-badge-restock { background: var(--sal-success-light); color: var(--sal-success); }
+.sal-badge-sale { background: var(--sal-primary-light); color: var(--sal-primary); }
+.sal-badge-deleted { background: var(--sal-danger-light); color: var(--sal-danger); }
+.sal-badge-edited { background: var(--sal-warning-light); color: var(--sal-warning); }
+.sal-badge-default { background: var(--sal-bg); color: var(--sal-text-muted); border: 1px solid var(--sal-border); }
+
+/* Role Badge */
+.sal-role-badge {
+  display: inline-flex;
+  margin-left: 8px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: var(--sal-bg);
+  color: var(--sal-text-muted);
+  border: 1px solid var(--sal-border);
+}
+
+/* Footer / Pagination */
+.sal-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background-color: var(--sal-card-bg);
+  border-top: 1px solid var(--sal-border);
+}
+
+.sal-page-info {
+  font-size: 0.875rem;
+  color: var(--sal-text-muted);
+}
+
+.sal-page-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background-color: var(--sal-card-bg);
+  border: 1px solid var(--sal-border);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--sal-text-main);
+  cursor: pointer;
+  transition: var(--sal-transition);
+  font-family: inherit;
+}
+
+.sal-btn:hover:not(:disabled) {
+  background-color: var(--sal-bg);
+  border-color: var(--sal-text-muted);
+}
+
+.sal-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sal-btn-primary {
+  background-color: var(--sal-primary);
+  color: white;
+  border-color: var(--sal-primary);
+}
+
+.sal-btn-primary:hover:not(:disabled) {
+  background-color: #4338ca;
+  border-color: #4338ca;
+}
+
+/* Empty State */
+.sal-empty, .sal-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  text-align: center;
+  color: var(--sal-text-muted);
+}
+
+.sal-empty-icon {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 16px;
+  background-color: var(--sal-bg);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sal-skeleton-row {
+  height: 48px;
+  margin: 8px 16px;
+  background: linear-gradient(90deg, var(--sal-border) 25%, var(--sal-bg) 50%, var(--sal-border) 75%);
+  background-size: 200% 100%;
+  animation: salPulse 1.5s infinite;
+  border-radius: 8px;
+}
+
+@keyframes salPulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

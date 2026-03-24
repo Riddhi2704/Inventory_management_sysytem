@@ -151,10 +151,10 @@ export default function Register() {
               <input required type="date" name="dob" value={formData.dob} onChange={handleChange} className="input-field" />
             </div>
 
-            <div className="form-group">
+            {/* <div className="form-group">
               <label>{textData.register.shopNameLabel}</label>
               <input required name="shopName" value={formData.shopName} onChange={handleChange} className="input-field" placeholder={textData.register.placeholders.shopName} />
-            </div>
+            </div> */}
 
             <div className="form-group">
               <label>{textData.register.mobileNumberLabel}</label>
@@ -236,6 +236,10 @@ export default function Register() {
                   <input required type="date" name="managerJoiningDate" value={formData.managerJoiningDate} onChange={handleChange} className="input-field" />
                 </div>
                 <div className="form-group">
+                  <label>{textData.register.shopNameLabel}</label>
+                  <input required name="shopName" value={formData.shopName} onChange={handleChange} className="input-field" placeholder={textData.register.placeholders.shopName} />
+                </div>
+                <div className="form-group">
                   <label>{textData.register.managerFields.department}</label>
                   <select name="department" value={formData.department} onChange={handleChange} className="input-field">
                     <option value="Inventory Management">Inventory Management</option>
@@ -258,6 +262,10 @@ export default function Register() {
                 <div className="form-group">
                   <label>{textData.register.staffFields.id}</label>
                   <input readOnly name="staffId" value={formData.staffId} className="input-field" disabled />
+                </div>
+                <div className="form-group">
+                  <label>{textData.register.shopNameLabel}</label>
+                  <input required name="shopName" value={formData.shopName} onChange={handleChange} className="input-field" placeholder={textData.register.placeholders.shopName} />
                 </div>
                 <div className="form-group">
                   <label>{textData.register.staffFields.joiningDate}</label>

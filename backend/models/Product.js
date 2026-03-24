@@ -22,4 +22,9 @@ const productSchema = new mongoose.Schema({
   approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 
+// Add a compound unique index for name, brand, and shopName
+// Case-insensitive comparison is handled in the controller, 
+// but the index provides database-level protection.
+productSchema.index({ name: 1, brand: 1, shopName: 1 }, { unique: true });
+
 module.exports = mongoose.model('Product', productSchema);

@@ -45,6 +45,7 @@ export default function ProductManagement() {
   const [stockUpdate, setStockUpdate] = useState(0);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [editError, setEditError] = useState('');
 
   // Fetch initial data
   const fetchData = useCallback(async () => {
@@ -64,8 +65,9 @@ export default function ProductManagement() {
         search: searchTerm,
         category: categoryFilter,
         supplier: supplierFilter,
-        stockStatus: statusFilter,
-        status: 'Active', // Only show Approved (Active) products in Product Management
+        lowStock: statusFilter === 'Low Stock' ? 'true' : 'false',
+        status: 'Active',
+        unique: 'true',
         paginate: 'true'
       });
 
@@ -75,10 +77,22 @@ export default function ProductManagement() {
       
       // Handle response based on structure (in case API isn't updated yet)
       if (productsRes.data.products) {
-        setProducts(productsRes.data.products);
+        // Deduplicate in frontend as a fallback for large datasets if needed, 
+        // though backend aggregation should handle it.
+        const uniqueProducts = productsRes.data.products.filter((product, index, self) => 
+          index === self.findIndex((p) => 
+            p.name === product.name && p.brand === product.brand
+          )
+        );
+        setProducts(uniqueProducts);
         setTotalPages(productsRes.data.pagination.pages);
       } else {
-        setProducts(productsRes.data);
+        const uniqueProducts = Array.isArray(productsRes.data) ? productsRes.data.filter((product, index, self) => 
+          index === self.findIndex((p) => 
+            p.name === product.name && p.brand === product.brand
+          )
+        ) : [];
+        setProducts(uniqueProducts);
         setTotalPages(1);
       }
 
@@ -109,6 +123,7 @@ export default function ProductManagement() {
   const handleEdit = (product) => {
     setSelectedProduct(product);
     setEditForm({ ...product, category: product.category?._id || product.category });
+    setEditError('');
     setShowEditModal(true);
   };
 
@@ -146,7 +161,7 @@ export default function ProductManagement() {
       setShowEditModal(false);
       fetchData();
     } catch (err) {
-      alert('Update failed');
+      setEditError(err.response?.data?.message || 'Update failed');
     } finally {
       setSaving(false);
     }
@@ -245,6 +260,7 @@ export default function ProductManagement() {
                 <th>{textData.productManagement.table.sku}</th>
                 <th>{textData.productManagement.table.name}</th>
                 <th>{textData.productManagement.table.category}</th>
+                <th>{textData.productManagement.table.brand}</th>
                 <th>{textData.productManagement.table.supplier}</th>
                 <th className="pm-price-cell">{textData.productManagement.table.buyPrice}</th>
                 <th className="pm-price-cell">{textData.productManagement.table.sellPrice}</th>
@@ -268,6 +284,7 @@ export default function ProductManagement() {
                   <td style={{fontFamily: 'monospace', fontSize: '0.75rem'}}>{p.productId}</td>
                   <td className="pm-product-name">{p.name}</td>
                   <td>{p.category?.name || 'N/A'}</td>
+                  <td>{p.brand || 'N/A'}</td>
                   <td>{p.supplier?.name || 'N/A'}</td>
                   <td className="pm-price-cell">₹{p.purchasePrice?.toLocaleString()}</td>
                   <td className="pm-price-cell">₹{p.sellingPrice?.toLocaleString()}</td>
@@ -309,6 +326,11 @@ export default function ProductManagement() {
                     <h3>{textData.productManagement.modals.edit.title}</h3>
                     <button onClick={() => setShowEditModal(false)}><X/></button>
                 </div>
+                {editError && (
+                  <div style={{ gridColumn: '1 / -1', padding: '0.75rem', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem' }}>
+                    {editError}
+                  </div>
+                )}
                 <form onSubmit={onUpdateProduct} style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem'}}>
                     <div className="pm-filter-group">
                         <label className="pm-filter-label">{textData.productManagement.modals.edit.name}</label>

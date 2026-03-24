@@ -140,7 +140,7 @@ const UpdateQuantity = () => {
           >
             <option value="">-- Choose Product --</option>
             {products.map((p) => (
-              <option key={p._id} value={p._id}>{p.name}</option>
+              <option key={p._id} value={p._id}>{p.name} {p.brand ? `- ${p.brand}` : ''}</option>
             ))}
           </select>
           {selectedCategory && products.length === 0 && (
@@ -225,7 +225,7 @@ const LowStockAlerts = () => {
               </div>
               <div className="sd-alert-content" style={{ flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <h4 className="sd-alert-title">{product.name}</h4>
+                  <h4 className="sd-alert-title">{product.name} {product.brand ? <span style={{ fontWeight: 'normal', fontSize: '0.9em', color: 'var(--sd-text-muted)' }}>({product.brand})</span> : ''}</h4>
                   <span style={{ fontSize: '0.75rem', color: 'var(--sd-text-muted)' }}>SKU: {product.productId}</span>
                 </div>
                 <p className="sd-alert-text">Minimum Stock Level: {product.minStockLevel || 50} | Current Stock: <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{product.quantity} {product.unitType || 'pcs'}</span></p>
