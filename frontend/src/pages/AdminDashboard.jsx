@@ -242,7 +242,7 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard 
                    title={textData.adminDashboard.statCards.earnings} 
-                   value={stats ? `₹${stats.totalInventoryValue.toLocaleString()}` : null} 
+                   value={stats ? `₹${(stats.totalInventoryValue || 0).toLocaleString()}` : null} 
                    icon={TrendingUp} 
                    mainColor="#22C55E" // Green
                    bgColor="#DCFCE7"

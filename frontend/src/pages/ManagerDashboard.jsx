@@ -385,7 +385,15 @@ export default function ManagerDashboard() {
                 {/* 2. Enhanced Sales Analytics Graph */}
                 <div className="analytics-card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '10px' }}>
-                     <h4 style={{ margin: 0 }}><Activity size={20} color="#6366f1" /> Dynamic Revenue Analytics</h4>
+                     <h4 style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
+                        <Activity size={20} color="#6366f1" /> 
+                        Dynamic Revenue Analytics
+                        {revenueData.length > 0 && (
+                          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#059669', background: '#d1fae5', padding: '4px 10px', borderRadius: '20px', marginLeft: '12px', letterSpacing: '0.025em' }}>
+                            TOTAL: ₹{revenueData.reduce((acc, curr) => acc + curr.revenue, 0).toLocaleString()}
+                          </span>
+                        )}
+                     </h4>
                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         <select 
                            style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px' }}

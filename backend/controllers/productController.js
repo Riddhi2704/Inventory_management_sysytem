@@ -86,7 +86,7 @@ const updateProduct = async (req, res) => {
       return res.status(404).json({ message: 'Product not found or access denied' });
     }
 
-    const { name, brand, quantity, unitType, purchasePrice, sellingPrice, storageLocation, description, category } = req.body;
+    const { name, brand, quantity, unitType, purchasePrice, sellingPrice, storageLocation, description, category, minStockLevel } = req.body;
 
     // Handle category: might be an ObjectId or a name string
     let finalCategoryId = category;
@@ -140,6 +140,7 @@ const updateProduct = async (req, res) => {
     if (sellingPrice !== undefined) product.sellingPrice = Number(sellingPrice);
     if (storageLocation !== undefined) product.storageLocation = storageLocation;
     if (description !== undefined) product.description = description;
+    if (minStockLevel !== undefined) product.minStockLevel = Number(minStockLevel);
     if (finalCategoryId) product.category = finalCategoryId;
 
     const updatedProduct = await product.save();

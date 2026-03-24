@@ -28,7 +28,12 @@ const getManagerDashboardStats = async (req, res) => {
     const totalProducts = await Product.countDocuments({ ...shopFilter, status: 'Active' });
     const outOfStock = await Product.countDocuments({ ...shopFilter, quantity: 0 });
     const pendingApproval = await Product.countDocuments({ ...shopFilter, status: 'Pending Approval' });
-    const lowStock = await Product.countDocuments({ ...shopFilter, quantity: { $gt: 0, $lt: 5 } });
+    const lowStock = await Product.countDocuments({ 
+      ...shopFilter, 
+      status: 'Active',
+      quantity: { $gt: 0 },
+      $expr: { $lte: ["$quantity", "$minStockLevel"] }
+    });
     
     // 3. Category Distribution
     const categoryStats = await Product.aggregate([
@@ -58,8 +63,10 @@ const getManagerDashboardStats = async (req, res) => {
     // 2. Low Stock Details
     const lowStockProducts = await Product.find({ 
       ...shopFilter, 
-      quantity: { $lt: 5 } 
-    }).select('name quantity').limit(5);
+      status: 'Active',
+      quantity: { $gt: 0 },
+      $expr: { $lte: ["$quantity", "$minStockLevel"] }
+    }).select('name quantity minStockLevel').limit(5);
 
     // 4. Sales & Profit Analytics (from MovementLog)
     // Use relative time boundaries (last 24h and last 30d) to avoid timezone-related 0 values
@@ -133,10 +140,34 @@ const getManagerDashboardStats = async (req, res) => {
 
     // Fast vs Slow Moving
     const fastMoving = topSellingProducts.slice(0, 3);
-    const slowMoving = await Product.find(shopFilter)
-      .sort({ quantity: -1 }) // Simple logic for slow moving: high stock, low movement
-      .limit(3)
-      .select('name');
+    
+    // Improved Slow Moving logic:
+    // 1. Identify products with NO sales in the 30-day window
+    // 2. Sort by highest stock level among those with no sales
+    // 3. Supplement with lowest selling items if needed
+    const soldProductNames = Object.keys(productSales);
+    let slowMoving = products
+      .filter(p => !soldProductNames.includes(p.name))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 3)
+      .map(p => ({ name: p.name, quantity: p.quantity }));
+
+    if (slowMoving.length < 3) {
+      const additionalSlow = Object.entries(productSales)
+        .map(([name, data]) => ({ name, ...data }))
+        .sort((a, b) => a.totalSold - b.totalSold);
+      
+      for (const item of additionalSlow) {
+        if (slowMoving.length >= 3) break;
+        if (!slowMoving.find(s => s.name === item.name)) {
+          const prod = products.find(p => p.name === item.name);
+          slowMoving.push({ 
+            name: item.name, 
+            quantity: prod ? prod.quantity : 0 
+          });
+        }
+      }
+    }
 
     // Recent movements for table
     const recentMovements = await MovementLog.find(shopFilter)
@@ -271,7 +302,7 @@ const getManagerRevenueAnalytics = async (req, res) => {
 
     const { category = 'all', productName = '', filterType = 'month' } = req.query;
 
-    let productFilter = { shopName: { $regex: new RegExp('^' + shopName, 'i') } };
+    let productFilter = { shopName: { $regex: shopName, $options: 'i' } };
     
     if (productName) {
       productFilter.name = { $regex: productName, $options: 'i' };
@@ -288,6 +319,15 @@ const getManagerRevenueAnalytics = async (req, res) => {
     const matchProds = await Product.find(productFilter).select('_id');
     const prodIds = matchProds.map(p => p._id);
 
+    const baseMatch = {
+      shopName: { $regex: shopName, $options: 'i' },
+      reason: { $regex: /sale|sold|sent out/i }
+    };
+
+    if (category !== 'all' || productName !== '') {
+      baseMatch.product = { $in: prodIds };
+    }
+
     const now = new Date();
     let startDate = new Date();
     let groupByFormat = "%Y-%m-%d";
@@ -296,29 +336,26 @@ const getManagerRevenueAnalytics = async (req, res) => {
       startDate.setHours(0,0,0,0);
       groupByFormat = "%Y-%m-%d %H:00";
     } else if (filterType === 'week') {
-      startDate.setDate(now.getDate() - 7);
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     } else if (filterType === 'month') {
-      startDate.setDate(now.getDate() - 30);
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     } else if (filterType === 'year') {
       startDate.setMonth(now.getMonth() - 12);
       groupByFormat = "%Y-%m";
     }
 
+    baseMatch.createdAt = { $gte: startDate };
+
     const pipeline = [
       { 
-        $match: { 
-          shopName: { $regex: new RegExp('^' + shopName, 'i') },
-          product: { $in: prodIds },
-          reason: { $regex: /sale|sold/i },
-          createdAt: { $gte: startDate }
-        }
+        $match: baseMatch
       },
       { $lookup: { from: 'products', localField: 'product', foreignField: '_id', as: 'prod' } },
       { $unwind: { path: '$prod', preserveNullAndEmptyArrays: true } },
       { 
         $group: {
           _id: { $dateToString: { format: groupByFormat, date: "$createdAt", timezone: "Asia/Kolkata" } },
-          revenue: { $sum: { $multiply: ['$quantityMoved', { $ifNull: ['$prod.sellingPrice', 10] }] } }
+          revenue: { $sum: { $multiply: ['$quantityMoved', { $ifNull: ['$prod.sellingPrice', 0] }] } }
         }
       },
       { $sort: { "_id": 1 } },

@@ -234,7 +234,7 @@ export default function AdminAuditLogs() {
                           >
                             {displayName}
                           </span>
-                          <span className="product-sku">{productCategory}</span>
+                          <span className="product-sku">{typeof productCategory === 'object' ? productCategory?.name : productCategory}</span>
                         </div>
                       </td>
                       <td>

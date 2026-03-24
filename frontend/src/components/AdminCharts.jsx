@@ -78,7 +78,7 @@ export default function AdminCharts() {
              <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>30-Day Revenue </span>
              <DollarSign size={18} color="#10b981" />
            </div>
-           <h2 style={{ fontSize: '1.75rem', margin: '0.5rem 0', color: '#0f172a', fontWeight: 700 }}>₹{data.totalRevenue.toLocaleString()}</h2>
+           <h2 style={{ fontSize: '1.75rem', margin: '0.5rem 0', color: '#0f172a', fontWeight: 700 }}>₹{(data.totalRevenue || 0).toLocaleString()}</h2>
            <span style={{ fontSize: '0.75rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}><TrendingUp size={12}/> +5% this month</span>
         </div>
 
@@ -87,7 +87,7 @@ export default function AdminCharts() {
              <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>Avg Order Value</span>
              <TrendingUp size={18} color="#6366f1" />
            </div>
-           <h2 style={{ fontSize: '1.75rem', margin: '0.5rem 0', color: '#0f172a', fontWeight: 700 }}>₹{data.avgOrderValue.toLocaleString()}</h2>
+           <h2 style={{ fontSize: '1.75rem', margin: '0.5rem 0', color: '#0f172a', fontWeight: 700 }}>₹{(data.avgOrderValue || 0).toLocaleString()}</h2>
            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Across {data.totalOrders} total orders</span>
         </div>
 

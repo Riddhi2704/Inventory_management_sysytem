@@ -345,6 +345,10 @@ export default function ProductManagement() {
                         <label className="pm-filter-label">{textData.productManagement.modals.edit.sellPrice}</label>
                         <input className="pm-input" type="number" value={editForm.sellingPrice} onChange={e => setEditForm({...editForm, sellingPrice: e.target.value})} />
                     </div>
+                    <div className="pm-filter-group">
+                        <label className="pm-filter-label">Min Stock Level</label>
+                        <input className="pm-input" type="number" value={editForm.minStockLevel} onChange={e => setEditForm({...editForm, minStockLevel: e.target.value})} />
+                    </div>
                     <div style={{gridColumn:'1 / -1', marginTop:'1rem', display:'flex', gap:'1rem', justifyContent:'flex-end'}}>
                         <button type="button" onClick={() => setShowEditModal(false)} className="pm-btn-page">{textData.productManagement.modals.buttons.cancel}</button>
                         <button type="submit" className="pm-btn-page" style={{background:'var(--pm-primary)', color:'white'}} disabled={saving}>{textData.productManagement.modals.buttons.save}</button>
