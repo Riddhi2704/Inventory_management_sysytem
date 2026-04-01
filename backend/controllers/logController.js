@@ -1,9 +1,6 @@
 const MovementLog = require('../models/MovementLog');
 const Product = require('../models/Product');
 
-// @desc    Get all movement logs
-// @route   GET /api/logs/movement
-// @access  Private (Manager, Admin)
 const getMovementLogs = async (req, res) => {
   try {
     const shopName = req.user.shopName;
@@ -20,10 +17,6 @@ const getMovementLogs = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-// @desc    Record product movement and update quantity
-// @route   POST /api/logs/movement
-// @access  Private (Staff, Manager, Admin)
 const recordMovement = async (req, res) => {
   try {
     const { productId, quantityMoved, reason, toLocation, fromLocation, isReturnOrDamage } = req.body;

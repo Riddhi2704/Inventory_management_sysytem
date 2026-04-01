@@ -1,8 +1,5 @@
 const Category = require('../models/Category');
 
-// @desc    Get all categories
-// @route   GET /api/categories
-// @access  Private
 const getCategories = async (req, res) => {
   try {
     const categories = await Category.find({});
@@ -12,9 +9,6 @@ const getCategories = async (req, res) => {
   }
 };
 
-// @desc    Create a category
-// @route   POST /api/categories
-// @access  Private (Manager, Admin)
 const createCategory = async (req, res) => {
   try {
     const { name, description } = req.body;
@@ -31,9 +25,6 @@ const createCategory = async (req, res) => {
   }
 };
 
-// @desc    Update a category
-// @route   PUT /api/categories/:id
-// @access  Private (Manager, Admin)
 const updateCategory = async (req, res) => {
   try {
     const { name, description } = req.body;
