@@ -30,11 +30,13 @@ export default function ManagerDashboard() {
   const setActiveTab = (tab) => setSearchParams({ tab });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  
+
   // Activity Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [filterReason, setFilterReason] = useState('All');
-  
+  const [activityPage, setActivityPage] = useState(1);
+  const activityItemsPerPage = 5;
+
   // Revenue Analytics Features
   const [revenueCategory, setRevenueCategory] = useState('all');
   const [revenueTime, setRevenueTime] = useState('month');
@@ -75,19 +77,19 @@ export default function ManagerDashboard() {
   // Fetch Advanced Revenue Analytics Graph
   useEffect(() => {
     const fetchRevenueGraph = async () => {
-       if (activeTab !== 'dashboard') return;
-       setRevenueLoading(true);
-       try {
-          const res = await axios.get('http://localhost:5001/api/manager/analytics/revenue', {
-             params: { filterType: revenueTime, category: revenueCategory, productName: debouncedRevSearch },
-             headers: { Authorization: `Bearer ${user.token}` }
-          });
-          setRevenueData(res.data);
-       } catch (err) {
-          console.error("Revenue graph error:", err);
-       } finally {
-          setRevenueLoading(false);
-       }
+      if (activeTab !== 'dashboard') return;
+      setRevenueLoading(true);
+      try {
+        const res = await axios.get('http://localhost:5001/api/manager/analytics/revenue', {
+          params: { filterType: revenueTime, category: revenueCategory, productName: debouncedRevSearch },
+          headers: { Authorization: `Bearer ${user.token}` }
+        });
+        setRevenueData(res.data);
+      } catch (err) {
+        console.error("Revenue graph error:", err);
+      } finally {
+        setRevenueLoading(false);
+      }
     };
     if (user?.token) fetchRevenueGraph();
   }, [revenueTime, revenueCategory, debouncedRevSearch, user, activeTab]);
@@ -108,6 +110,14 @@ export default function ManagerDashboard() {
     });
   }, [stats?.recentMovements, searchTerm, filterReason]);
 
+  // Reset activity page on filter change
+  useEffect(() => {
+    setActivityPage(1);
+  }, [searchTerm, filterReason]);
+
+  const totalActivityPages = Math.ceil(filteredMovements.length / activityItemsPerPage);
+  const paginatedActivities = filteredMovements.slice((activityPage - 1) * activityItemsPerPage, activityPage * activityItemsPerPage);
+
   const menuItems = [
     { id: 'profile', label: textData.profile.title, icon: <Users size={20} /> },
     { id: 'dashboard', label: textData.managerDashboard.tabs.dashboard, icon: <LayoutDashboard size={20} /> },
@@ -120,28 +130,28 @@ export default function ManagerDashboard() {
 
   // Custom Tooltip for Donut Chart
   const CustomDonutTooltip = ({ active, payload }) => {
-     if (active && payload && payload.length) {
-        return (
-           <div style={{ background: 'white', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}>
-              <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: '#1e293b' }}>{payload[0].name}</p>
-              <p style={{ margin: 0, color: payload[0].payload.fill, fontWeight: 700 }}>{payload[0].value} Products Total</p>
-           </div>
-        );
-     }
-     return null;
+    if (active && payload && payload.length) {
+      return (
+        <div style={{ background: 'white', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}>
+          <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: '#1e293b' }}>{payload[0].name}</p>
+          <p style={{ margin: 0, color: payload[0].payload.fill, fontWeight: 700 }}>{payload[0].value} Products Total</p>
+        </div>
+      );
+    }
+    return null;
   };
 
   // Custom Label for Donut Inner Percentage
   const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-     const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
-     const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
-     if (percent < 0.05) return null; // hide small percentages
-     return (
-        <text x={x} y={y} fill="white" fontSize="12" fontWeight="bold" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
-           {`${(percent * 100).toFixed(0)}%`}
-        </text>
-     );
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
+    const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
+    if (percent < 0.05) return null; // hide small percentages
+    return (
+      <text x={x} y={y} fill="white" fontSize="12" fontWeight="bold" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
   };
 
   return (
@@ -209,7 +219,7 @@ export default function ManagerDashboard() {
         <div className="dashboard-content">
           {activeTab === 'dashboard' && (
             <div className="animate-fade">
-              
+
               {/* Advanced Summary Metrics */}
               <div style={{
                 display: 'grid',
@@ -258,7 +268,7 @@ export default function ManagerDashboard() {
                     tab: 'categories'
                   },
                   {
-                    title: 'Today Sales',
+                    title: 'Week Sales',
                     value: stats?.summary?.todaySales != null ? `₹${stats.summary.todaySales.toLocaleString()}` : null,
                     icon: <Activity size={24} color="#10b981" />,
                     bgColor: '#ecfdf5',
@@ -337,13 +347,13 @@ export default function ManagerDashboard() {
                         </h3>
                       )}
                       {card.trend && !loading && (
-                         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: card.trendColor, marginTop: '4px', display: 'inline-block' }}>
-                           {card.trend}
-                         </span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: card.trendColor, marginTop: '4px', display: 'inline-block' }}>
+                          {card.trend}
+                        </span>
                       )}
                     </div>
                     {card.tab !== 'dashboard' && (
-                       <ArrowUpRight size={16} color="#cbd5e1" style={{ position: 'absolute', top: '16px', right: '16px' }} />
+                      <ArrowUpRight size={16} color="#cbd5e1" style={{ position: 'absolute', top: '16px', right: '16px' }} />
                     )}
                   </div>
                 ))}
@@ -351,7 +361,7 @@ export default function ManagerDashboard() {
 
               {/* Advanced 4-Grid Dashboard Setup */}
               <div className="analytics-grid" style={{ gap: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))' }}>
-                
+
                 {/* 1. Category Distribution (Donut Chart) */}
                 <div className="analytics-card" style={{ display: 'flex', flexDirection: 'column' }}>
                   <h4><PieIcon size={20} color="#8b5cf6" /> Category Distribution</h4>
@@ -385,73 +395,73 @@ export default function ManagerDashboard() {
                 {/* 2. Enhanced Sales Analytics Graph */}
                 <div className="analytics-card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '10px' }}>
-                     <h4 style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
-                        <Activity size={20} color="#6366f1" /> 
-                        Dynamic Revenue Analytics
-                        {revenueData.length > 0 && (
-                          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#059669', background: '#d1fae5', padding: '4px 10px', borderRadius: '20px', marginLeft: '12px', letterSpacing: '0.025em' }}>
-                            TOTAL: ₹{revenueData.reduce((acc, curr) => acc + curr.revenue, 0).toLocaleString()}
-                          </span>
-                        )}
-                     </h4>
-                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <select 
-                           style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px' }}
-                           value={revenueCategory} 
-                           onChange={e => setRevenueCategory(e.target.value)}
-                        >
-                           <option value="all">All Categories</option>
-                           {stats?.categoryDistribution?.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-                        </select>
-                        <select 
-                           style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px' }}
-                           value={revenueTime} 
-                           onChange={e => setRevenueTime(e.target.value)}
-                        >
-                           <option value="today">Today</option>
-                           <option value="week">This Week</option>
-                           <option value="month">This Month</option>
-                           <option value="year">This Year</option>
-                        </select>
-                        <div style={{ position: 'relative' }}>
-                           <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                           <input 
-                              placeholder="Search Product..." 
-                              value={revenueSearch}
-                              onChange={e => setRevenueSearch(e.target.value)}
-                              style={{ padding: '6px 12px 6px 30px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', width: '160px' }}
-                           />
-                        </div>
-                     </div>
+                    <h4 style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
+                      <Activity size={20} color="#6366f1" />
+                      Dynamic Revenue Analytics
+                      {revenueData.length > 0 && (
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#059669', background: '#d1fae5', padding: '4px 10px', borderRadius: '20px', marginLeft: '12px', letterSpacing: '0.025em' }}>
+                          TOTAL: ₹{revenueData.reduce((acc, curr) => acc + curr.revenue, 0).toLocaleString()}
+                        </span>
+                      )}
+                    </h4>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <select
+                        style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px' }}
+                        value={revenueCategory}
+                        onChange={e => setRevenueCategory(e.target.value)}
+                      >
+                        <option value="all">All Categories</option>
+                        {stats?.categoryDistribution?.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                      </select>
+                      <select
+                        style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px' }}
+                        value={revenueTime}
+                        onChange={e => setRevenueTime(e.target.value)}
+                      >
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="year">This Year</option>
+                      </select>
+                      <div style={{ position: 'relative' }}>
+                        <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                        <input
+                          placeholder="Search Product..."
+                          value={revenueSearch}
+                          onChange={e => setRevenueSearch(e.target.value)}
+                          style={{ padding: '6px 12px 6px 30px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13px', width: '160px' }}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  
+
                   <div style={{ flex: 1, minHeight: '280px', position: 'relative' }}>
-                     {revenueLoading ? (
-                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.7)', zIndex: 10 }}>
-                           <Loader2 className="animate-spin" size={32} color="#6366f1" />
-                        </div>
-                     ) : revenueData.length === 0 ? (
-                        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
-                           <BarChart3 size={32} style={{ marginBottom: '8px', opacity: 0.5 }} />
-                           <span>No Revenue Data Available</span>
-                        </div>
-                     ) : (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                            <defs>
-                              <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/>
-                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                            <XAxis dataKey="date" axisLine={false} tickLine={false} style={{ fontSize: 11, fill: '#64748b' }} dy={10} />
-                            <YAxis axisLine={false} tickLine={false} style={{ fontSize: 11, fill: '#64748b' }} />
-                            <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
-                            <Area type="monotone" dataKey="revenue" name="Total Revenue" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" animationDuration={1000} />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                     )}
+                    {revenueLoading ? (
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.7)', zIndex: 10 }}>
+                        <Loader2 className="animate-spin" size={32} color="#6366f1" />
+                      </div>
+                    ) : revenueData.length === 0 ? (
+                      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+                        <BarChart3 size={32} style={{ marginBottom: '8px', opacity: 0.5 }} />
+                        <span>No Revenue Data Available</span>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8} />
+                              <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                          <XAxis dataKey="date" axisLine={false} tickLine={false} style={{ fontSize: 11, fill: '#64748b' }} dy={10} />
+                          <YAxis axisLine={false} tickLine={false} style={{ fontSize: 11, fill: '#64748b' }} />
+                          <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                          <Area type="monotone" dataKey="revenue" name="Total Revenue" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" animationDuration={1000} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    )}
                   </div>
                 </div>
 
@@ -459,39 +469,39 @@ export default function ManagerDashboard() {
                 <div className="analytics-card">
                   <h4><IndianRupee size={20} color="#10b981" /> Profit Margins & Value</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginTop: '1rem' }}>
-                    
+
                     {/* Purchase Value */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem', background: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0', transition: 'transform 0.2s' }}>
-                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <div style={{ background: '#e2e8f0', padding: '10px', borderRadius: '10px' }}><ShoppingCart size={20} color="#475569" /></div>
-                          <div>
-                             <span style={{ display: 'block', fontSize: '0.8125rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Total Purchase Value</span>
-                             <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b' }}>₹{(stats?.profitAnalysis?.totalPurchaseValue || 0).toLocaleString()}</span>
-                          </div>
-                       </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ background: '#e2e8f0', padding: '10px', borderRadius: '10px' }}><ShoppingCart size={20} color="#475569" /></div>
+                        <div>
+                          <span style={{ display: 'block', fontSize: '0.8125rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Total Purchase Value</span>
+                          <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b' }}>₹{(stats?.profitAnalysis?.totalPurchaseValue || 0).toLocaleString()}</span>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Selling Value */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem', background: '#eff6ff', borderRadius: '16px', border: '1px solid #bfdbfe', transition: 'transform 0.2s' }}>
-                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <div style={{ background: '#dbeafe', padding: '10px', borderRadius: '10px' }}><Tags size={20} color="#3b82f6" /></div>
-                          <div>
-                             <span style={{ display: 'block', fontSize: '0.8125rem', color: '#3b82f6', fontWeight: 600, textTransform: 'uppercase' }}>Est. Selling Value</span>
-                             <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e3a8a' }}>₹{(stats?.profitAnalysis?.totalSellingValue || 0).toLocaleString()}</span>
-                          </div>
-                       </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ background: '#dbeafe', padding: '10px', borderRadius: '10px' }}><Tags size={20} color="#3b82f6" /></div>
+                        <div>
+                          <span style={{ display: 'block', fontSize: '0.8125rem', color: '#3b82f6', fontWeight: 600, textTransform: 'uppercase' }}>Est. Selling Value</span>
+                          <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e3a8a' }}>₹{(stats?.profitAnalysis?.totalSellingValue || 0).toLocaleString()}</span>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Actual Profit */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem', background: '#ecfdf5', borderRadius: '16px', border: '1px solid #a7f3d0', transition: 'transform 0.2s' }}>
-                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <div style={{ background: '#d1fae5', padding: '10px', borderRadius: '10px' }}><ArrowUpRight size={20} color="#059669" /></div>
-                          <div>
-                             <span style={{ display: 'block', fontSize: '0.8125rem', color: '#059669', fontWeight: 600, textTransform: 'uppercase' }}>Projected Net Profit</span>
-                             <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#064e3b' }}>₹{(stats?.profitAnalysis?.totalProfit || 0).toLocaleString()}</span>
-                          </div>
-                       </div>
-                       <div style={{ background: '#34d399', color: 'white', padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 'bold' }}>+12.4%</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ background: '#d1fae5', padding: '10px', borderRadius: '10px' }}><ArrowUpRight size={20} color="#059669" /></div>
+                        <div>
+                          <span style={{ display: 'block', fontSize: '0.8125rem', color: '#059669', fontWeight: 600, textTransform: 'uppercase' }}>Projected Net Profit</span>
+                          <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#064e3b' }}>₹{(stats?.profitAnalysis?.totalProfit || 0).toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <div style={{ background: '#34d399', color: 'white', padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 'bold' }}>+12.4%</div>
                     </div>
 
                   </div>
@@ -501,36 +511,36 @@ export default function ManagerDashboard() {
                 <div className="analytics-card">
                   <h4><RefreshCcw size={20} color="#06b6d4" /> Fast vs Slow Moving Inventory</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '1.5rem' }}>
-                    
+
                     <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                      <h5 style={{ fontSize: '0.875rem', marginBottom: '1rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}><TrendingUp size={16}/> Top Sales Performer</h5>
+                      <h5 style={{ fontSize: '0.875rem', marginBottom: '1rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}><TrendingUp size={16} /> Top Sales Performer</h5>
                       <div className="info-list">
-                         {stats?.fastMoving?.map((p, i) => (
-                           <div key={i} className="info-item" style={{ padding: '0.75rem', border: '1px solid #fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                             <div style={{ minWidth: 0 }}>
-                                <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Sold: {p.totalSold} qty</div>
-                             </div>
-                             <ArrowUpRight size={18} color="#10b981" style={{ flexShrink: 0 }} />
-                           </div>
-                         ))}
-                         {!stats?.fastMoving?.length && <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>No sales data yet.</p>}
+                        {stats?.fastMoving?.map((p, i) => (
+                          <div key={i} className="info-item" style={{ padding: '0.75rem', border: '1px solid #fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Sold: {p.totalSold} qty</div>
+                            </div>
+                            <ArrowUpRight size={18} color="#10b981" style={{ flexShrink: 0 }} />
+                          </div>
+                        ))}
+                        {!stats?.fastMoving?.length && <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>No sales data yet.</p>}
                       </div>
                     </div>
 
                     <div style={{ background: '#fff1f2', padding: '1.25rem', borderRadius: '16px', border: '1px solid #fecaca' }}>
-                      <h5 style={{ fontSize: '0.875rem', marginBottom: '1rem', color: '#e11d48', display: 'flex', alignItems: 'center', gap: '6px' }}><TrendingDown size={16}/> Lowest Movement</h5>
+                      <h5 style={{ fontSize: '0.875rem', marginBottom: '1rem', color: '#e11d48', display: 'flex', alignItems: 'center', gap: '6px' }}><TrendingDown size={16} /> Lowest Movement</h5>
                       <div className="info-list">
-                         {stats?.slowMoving?.map((p, i) => (
-                           <div key={i} className="info-item" style={{ padding: '0.75rem', background: 'white', border: '1px solid #fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                             <div style={{ minWidth: 0 }}>
-                                <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Stock: {p.quantity || 0}</div>
-                             </div>
-                             <ArrowDownRight size={18} color="#e11d48" style={{ flexShrink: 0 }} />
-                           </div>
-                         ))}
-                         {!stats?.slowMoving?.length && <p style={{ fontSize: '0.8rem', color: '#fca5a5' }}>No inventory loaded.</p>}
+                        {stats?.slowMoving?.map((p, i) => (
+                          <div key={i} className="info-item" style={{ padding: '0.75rem', background: 'white', border: '1px solid #fff', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Stock: {p.quantity || 0}</div>
+                            </div>
+                            <ArrowDownRight size={18} color="#e11d48" style={{ flexShrink: 0 }} />
+                          </div>
+                        ))}
+                        {!stats?.slowMoving?.length && <p style={{ fontSize: '0.8rem', color: '#fca5a5' }}>No inventory loaded.</p>}
                       </div>
                     </div>
 
@@ -554,6 +564,7 @@ export default function ManagerDashboard() {
                       <option value="Restock">Restock</option>
                       <option value="Damage">Damage</option>
                       <option value="Return">Return</option>
+                      <option value="Deleted">Deleted</option>
                     </select>
                     <div style={{ position: 'relative' }}>
                       <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
@@ -585,17 +596,17 @@ export default function ManagerDashboard() {
                           </td>
                         </tr>
                       ) : (
-                        filteredMovements.slice(0, 10).map((m, index) => (
+                        paginatedActivities.map((m, index) => (
                           <tr key={m._id || index} style={{ borderBottom: '1px solid #e2e8f0', transition: 'background 0.2s', cursor: 'default' }} onMouseOver={e => e.currentTarget.style.background = '#f8fafc'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
                             <td style={{ padding: '12px 16px', fontWeight: 500, color: '#1e293b' }}>
                               {m.product?.name || m.productName || (m.reason?.startsWith('Deleted: ') ? 'Deleted Item' : 'Unknown')}
                               {m.product?.category?.name && <span style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', fontWeight: 400 }}>{m.product.category.name}</span>}
                             </td>
                             <td style={{ padding: '12px 16px' }}>
-                              <span style={{ 
+                              <span style={{
                                 padding: '4px 8px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600,
                                 background: m.reason.includes('Sale') ? '#d1fae5' : m.reason.includes('Damage') || m.reason.includes('Deleted') ? '#fee2e2' : '#e0e7ff',
-                                color: m.reason.includes('Sale') ? '#059669' : m.reason.includes('Damage') || m.reason.includes('Deleted') ? '#dc2626' : '#4338ca' 
+                                color: m.reason.includes('Sale') ? '#059669' : m.reason.includes('Damage') || m.reason.includes('Deleted') ? '#dc2626' : '#4338ca'
                               }}>
                                 {m.reason}
                               </span>
@@ -612,6 +623,39 @@ export default function ManagerDashboard() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {!loading && filteredMovements.length > 0 && (
+                  <div className="pl-pagination-wrapper">
+                    <button
+                      onClick={() => setActivityPage(prev => Math.max(prev - 1, 1))}
+                      disabled={activityPage === 1}
+                      className="pl-pagination-btn"
+                    >
+                      Previous
+                    </button>
+
+                    <div className="pl-pagination-numbers">
+                      {Array.from({ length: totalActivityPages }, (_, i) => i + 1).map((number) => (
+                        <button
+                          key={number}
+                          onClick={() => setActivityPage(number)}
+                          className={`pl-pagination-number ${activityPage === number ? 'active' : ''}`}
+                        >
+                          {number}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => setActivityPage(prev => Math.min(prev + 1, totalActivityPages))}
+                      disabled={activityPage === totalActivityPages}
+                      className="pl-pagination-btn"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
               </div>
 
             </div>

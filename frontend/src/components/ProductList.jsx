@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { Pencil, Trash2, Search, Loader2, Package, X } from 'lucide-react';
@@ -20,6 +20,8 @@ export default function ProductList() {
   const [categories, setCategories] = useState([]);
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   useEffect(() => {
     fetchProducts();
@@ -95,11 +97,23 @@ export default function ProductList() {
     }
   };
 
-  const filteredProducts = products.filter(p => 
-    p.status !== 'Rejected' && 
-    (p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.productId?.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => 
+      p.status !== 'Rejected' && 
+      (p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.productId?.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [products, searchTerm]);
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const indexOfLast = currentPage * itemsPerPage;
+  const indexOfFirst = indexOfLast - itemsPerPage;
+  const currentItems = filteredProducts.slice(indexOfFirst, indexOfLast);
 
   return (
     <div className="pl-container" style={{ padding: '1rem' }}>
@@ -138,9 +152,9 @@ export default function ProductList() {
             <tbody>
               {loading ? (
                 <tr><td colSpan={user?.role !== 'Staff' ? 10 : 9} style={{ textAlign: 'center', padding: '3rem' }}><Loader2 className="animate-spin" /></td></tr>
-              ) : filteredProducts.length === 0 ? (
+              ) : currentItems.length === 0 ? (
                 <tr><td colSpan={user?.role !== 'Staff' ? 10 : 9} style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>No products found.</td></tr>
-              ) : filteredProducts.map(p => (
+              ) : currentItems.map(p => (
                 <tr key={p._id}>
                   <td>
                     <div style={{ width: '36px', height: '36px', background: '#f1f5f9', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -172,6 +186,39 @@ export default function ProductList() {
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
+        {!loading && filteredProducts.length > 0 && (
+          <div className="pl-pagination-wrapper">
+            <button 
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="pl-pagination-btn"
+            >
+              Previous
+            </button>
+            
+            <div className="pl-pagination-numbers">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
+                <button
+                  key={number}
+                  onClick={() => setCurrentPage(number)}
+                  className={`pl-pagination-number ${currentPage === number ? 'active' : ''}`}
+                >
+                  {number}
+                </button>
+              ))}
+            </div>
+
+            <button 
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="pl-pagination-btn"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Edit Modal */}
